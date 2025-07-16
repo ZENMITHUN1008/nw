@@ -1,317 +1,462 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Bot, User, Loader, Lightbulb, FileText, Zap, Settings } from 'lucide-react';
-import { aiService, AIWorkflowRequest } from '../services/aiService';
+import { Send, Plus, Trash2, Bot, User, History, Download, Share2, RefreshCw, Loader, Database, Power, MessageSquare, Brain, Terminal, Cpu, Globe, Lock, Unlock, Key, Check, X, AlertTriangle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { aiService, AIWorkflowRequest, MCPServerConfig } from '../services/aiService';
 import { useAuth } from '../hooks/useAuth';
-import { useN8n } from '../hooks/useN8n';
-import { WorkflowVisualization } from '../components/WorkflowVisualization';
-import { MarkdownRenderer } from '../components/MarkdownRenderer';
 
 interface Message {
   id: string;
-  type: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-  workflow?: any;
-  suggestions?: string[];
+  text: string;
+  sender: 'user' | 'bot';
+  timestamp: string;
 }
 
-interface AIPlaygroundProps {
-  onBack: () => void;
-}
-
-export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
+export const AIPlayground: React.FC = () => {
   const { user } = useAuth();
-  const { connections, activeConnection } = useN8n();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'ai',
-      content: "Hello! I'm your AI workflow assistant. I can help you create, optimize, and troubleshoot n8n workflows. What would you like to build today?",
-      timestamp: new Date(),
-      suggestions: [
-        "Create a workflow that sends daily email reports",
-        "Build an automated social media posting system",
-        "Set up data synchronization between two platforms",
-        "Create a webhook-based notification system"
-      ]
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [workflow, setWorkflow] = useState<any>(null);
+  const [explanation, setExplanation] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [mcpServers, setMcpServers] = useState<MCPServerConfig[]>([]);
+  const [newServerName, setNewServerName] = useState('');
+  const [newServerUrl, setNewServerUrl] = useState('');
+  const [isAddingServer, setIsAddingServer] = useState(false);
+  const [selectedServer, setSelectedServer] = useState<string | null>(null);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionTestResults, setConnectionTestResults] = useState<{ success: boolean; error?: string; tools?: string[] } | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamedText, setStreamedText] = useState('');
+  const [isMaximized, setIsMaximized] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollToBottom();
+    loadMCPServers();
+  }, []);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async () => {
+    if (!input.trim()) return;
 
-    const userMessage: Message = {
+    const newMessage: Message = {
       id: Date.now().toString(),
-      type: 'user',
-      content: input.trim(),
-      timestamp: new Date()
+      text: input,
+      sender: 'user',
+      timestamp: new Date().toLocaleTimeString()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prevMessages => [...prevMessages, newMessage]);
+    setHistory(prevHistory => [...prevHistory, input]);
+
+    const aiRequest: AIWorkflowRequest = {
+      prompt: input,
+      userContext: {
+        userId: user?.id,
+        email: user?.email
+      }
+    };
+
     setInput('');
-    setIsLoading(true);
+    setIsGenerating(true);
+    setError(null);
+    setWorkflow(null);
+    setExplanation('');
 
     try {
-      // Check if user is asking for workflow generation
-      const isWorkflowRequest = input.toLowerCase().includes('create') || 
-                               input.toLowerCase().includes('build') || 
-                               input.toLowerCase().includes('workflow') ||
-                               input.toLowerCase().includes('automation');
+      const response = await aiService.generateWorkflow(aiRequest);
 
-      if (isWorkflowRequest && user) {
-        // Generate workflow
-        const workflowRequest: AIWorkflowRequest = {
-          description: input.trim(),
-          userId: user.id,
-          connectionId: activeConnection?.id
+      if (response.success) {
+        setWorkflow(response.workflow);
+        setExplanation(response.explanation);
+        const botMessage: Message = {
+          id: Date.now().toString(),
+          text: response.explanation,
+          sender: 'bot',
+          timestamp: new Date().toLocaleTimeString()
         };
-
-        const response = await aiService.generateWorkflow(workflowRequest);
-
-        if (response.success && response.workflow) {
-          const aiMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            type: 'ai',
-            content: `I've created a workflow for you: **${response.workflow.name}**\n\n${response.workflow.description}\n\nThis workflow includes:\n- Webhook trigger for incoming data\n- Data processing function\n- Error handling capabilities\n\nYou can see the visual representation below and customize it further in your n8n instance.`,
-            timestamp: new Date(),
-            workflow: response.workflow,
-            suggestions: response.suggestions
-          };
-          setMessages(prev => [...prev, aiMessage]);
-        } else {
-          const aiMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            type: 'ai',
-            content: `I apologize, but I encountered an error while generating your workflow: ${response.error || 'Unknown error'}. Please try rephrasing your request or provide more specific details about what you'd like to automate.`,
-            timestamp: new Date(),
-            suggestions: [
-              "Try describing your use case in more detail",
-              "Specify the data sources and destinations",
-              "Mention any specific integrations you need"
-            ]
-          };
-          setMessages(prev => [...prev, aiMessage]);
-        }
+        setMessages(prevMessages => [...prevMessages, botMessage]);
       } else {
-        // General AI conversation
-        let aiResponse = '';
-        
-        if (input.toLowerCase().includes('hello') || input.toLowerCase().includes('hi')) {
-          aiResponse = "Hello! I'm here to help you with n8n workflow automation. I can assist you with creating workflows, optimizing existing ones, troubleshooting issues, and providing best practices. What specific automation challenge are you working on?";
-        } else if (input.toLowerCase().includes('help')) {
-          aiResponse = "I can help you with various n8n workflow tasks:\n\n• **Create workflows** - Describe what you want to automate\n• **Optimize existing workflows** - Share your workflow for improvement suggestions\n• **Troubleshoot issues** - Describe problems you're experiencing\n• **Best practices** - Get recommendations for workflow design\n• **Integration guidance** - Learn about connecting different services\n\nWhat would you like assistance with?";
-        } else if (input.toLowerCase().includes('connection') || input.toLowerCase().includes('connect')) {
-          const connectionStatus = connections.length > 0 ? 
-            `You have ${connections.length} n8n connection(s) configured.` : 
-            "You don't have any n8n connections set up yet.";
-          
-          aiResponse = `${connectionStatus}\n\nTo create workflows, you'll need to connect to your n8n instance first. You can do this from the main dashboard by clicking "Add Connection" and providing your n8n instance URL and API key.\n\nOnce connected, I can help you create and manage workflows directly!`;
-        } else {
-          aiResponse = "I understand you'd like to work with n8n workflows. Could you provide more specific details about what you want to automate? For example:\n\n• What triggers should start the workflow?\n• What data needs to be processed?\n• What actions should be performed?\n• Which services or APIs need to be integrated?\n\nThe more details you provide, the better I can help you create the perfect automation!";
-        }
-
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'ai',
-          content: aiResponse,
-          timestamp: new Date(),
-          suggestions: [
-            "Show me workflow templates",
-            "Help me connect to n8n",
-            "Create a data processing workflow",
-            "Build an email automation"
-          ]
+        setError(response.error || 'Failed to generate workflow.');
+        const botMessage: Message = {
+          id: Date.now().toString(),
+          text: `Error: ${response.error || 'Failed to generate workflow.'}`,
+          sender: 'bot',
+          timestamp: new Date().toLocaleTimeString()
         };
-        setMessages(prev => [...prev, aiMessage]);
+        setMessages(prevMessages => [...prevMessages, botMessage]);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      setError(errorMessage);
+      const botMessage: Message = {
+        id: Date.now().toString(),
+        text: `Error: ${errorMessage}`,
+        sender: 'bot',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setMessages(prevMessages => [...prevMessages, botMessage]);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const startStream = async () => {
+    setIsStreaming(true);
+    setStreamedText('');
+
+    const stream = await aiService.generateWorkflowStream();
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+
+    let accumulatedText = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        accumulatedText += decoder.decode(value);
+        setStreamedText(accumulatedText);
       }
     } catch (error) {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'ai',
-        content: "I apologize, but I encountered an error while processing your request. Please try again or contact support if the issue persists.",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiMessage]);
+      console.error("Streaming error:", error);
+      setError("Failed to process the stream.");
     } finally {
-      setIsLoading(false);
+      setIsStreaming(false);
+      reader.releaseLock();
     }
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setInput(suggestion);
+  const saveWorkflow = async () => {
+    if (!workflow) {
+      setError('No workflow to save.');
+      return;
+    }
+
+    try {
+      const response = await aiService.saveGeneratedWorkflow(workflow);
+      if (response.success) {
+        alert('Workflow saved successfully!');
+      } else {
+        setError(response.error || 'Failed to save workflow.');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save workflow.';
+      setError(errorMessage);
+    }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  const clearChat = () => {
+    setMessages([]);
+    setWorkflow(null);
+    setExplanation('');
+    setError(null);
+  };
+
+  const toggleHistory = () => {
+    setShowHistory(!showHistory);
+  };
+
+  const toggleSettings = () => {
+    setIsSettingsOpen(!isSettingsOpen);
+  };
+
+  const loadMCPServers = async () => {
+    try {
+      const servers = await aiService.getMCPServers();
+      setMcpServers(servers);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load MCP servers.');
     }
+  };
+
+  const handleAddServer = async () => {
+    setIsAddingServer(true);
+    try {
+      const response = await aiService.addMCPServer(newServerName, newServerUrl);
+      if (response.success) {
+        setNewServerName('');
+        setNewServerUrl('');
+        await loadMCPServers();
+      } else {
+        setError(response.error || 'Failed to add MCP server.');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add MCP server.';
+      setError(errorMessage);
+    } finally {
+      setIsAddingServer(false);
+    }
+  };
+
+  const handleRemoveServer = async (serverId: string) => {
+    try {
+      const response = await aiService.removeMCPServer(serverId);
+      if (response.success) {
+        await loadMCPServers();
+      } else {
+        setError(response.error || 'Failed to remove MCP server.');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to remove MCP server.';
+      setError(errorMessage);
+    }
+  };
+
+  const handleTestConnection = async (serverId: string) => {
+    setSelectedServer(serverId);
+    setIsTestingConnection(true);
+    setConnectionTestResults(null);
+
+    try {
+      const response = await aiService.testMCPConnection(serverId);
+      setConnectionTestResults(response);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Connection test failed.';
+      setError(errorMessage);
+      setConnectionTestResults({ success: false, error: errorMessage });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const toggleMaximize = () => {
+    setIsMaximized(!isMaximized);
   };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-50">
       {/* Header */}
       <header className="bg-slate-800/50 backdrop-blur-xl border-b border-slate-700/30 sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={onBack}
-                className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-lg font-semibold">AI Workflow Assistant</h1>
-                  <p className="text-xs text-slate-400">Powered by advanced AI</p>
-                </div>
-              </div>
+            <div className="flex items-center">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                AI Playground
+              </h1>
             </div>
             <div className="flex items-center space-x-3">
-              {activeConnection && (
-                <div className="flex items-center space-x-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-emerald-400">Connected</span>
-                </div>
-              )}
+              <button
+                onClick={toggleMaximize}
+                className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
+              >
+                {isMaximized ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronUp className="w-5 h-5 text-slate-400" />}
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
-        <div className="space-y-6">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex items-start space-x-4 ${
-                message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-              }`}
-            >
-              {/* Avatar */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                message.type === 'user' 
-                  ? 'bg-slate-600' 
-                  : 'bg-gradient-to-br from-indigo-500 to-purple-600'
-              }`}>
-                {message.type === 'user' ? (
-                  <User className="w-4 h-4 text-white" />
-                ) : (
-                  <Bot className="w-4 h-4 text-white" />
-                )}
-              </div>
-
-              {/* Message Content */}
-              <div className={`flex-1 max-w-3xl ${
-                message.type === 'user' ? 'text-right' : ''
-              }`}>
-                <div className={`inline-block p-4 rounded-2xl ${
-                  message.type === 'user'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-800/50 border border-slate-700/50'
-                }`}>
-                  <MarkdownRenderer content={message.content} />
-                </div>
-
-                {/* Workflow Visualization */}
-                {message.workflow && (
-                  <div className="mt-4">
-                    <WorkflowVisualization workflow={message.workflow} />
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${isMaximized ? 'max-h-screen overflow-hidden' : ''}`}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Chat Interface */}
+          <div className="lg:col-span-2">
+            <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/40 rounded-2xl p-6 space-y-6">
+              {/* Chat Messages */}
+              <div ref={chatContainerRef} className="space-y-4 max-h-[400px] overflow-y-auto">
+                {messages.map(message => (
+                  <div key={message.id} className={`flex flex-col ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div className={`px-4 py-2 rounded-lg ${message.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
+                      {message.text}
+                    </div>
+                    <span className="text-xs text-slate-400 mt-1">{message.timestamp}</span>
                   </div>
-                )}
-
-                {/* Suggestions */}
-                {message.suggestions && message.suggestions.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm text-slate-400 flex items-center">
-                      <Lightbulb className="w-4 h-4 mr-2" />
-                      Try these suggestions:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {message.suggestions.map((suggestion, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          className="px-3 py-1 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 rounded-full text-sm text-slate-300 hover:text-white transition-all duration-200"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
+                ))}
+                {isGenerating && (
+                  <div className="flex items-start">
+                    <div className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300">
+                      Generating...
                     </div>
                   </div>
                 )}
+                {isStreaming && (
+                  <div className="flex items-start">
+                    <div className="px-4 py-2 rounded-lg bg-slate-700 text-slate-300">
+                      {streamedText}
+                    </div>
+                  </div>
+                )}
+              </div>
 
-                {/* Timestamp */}
-                <p className="text-xs text-slate-500 mt-2">
-                  {message.timestamp.toLocaleTimeString()}
-                </p>
+              {/* Chat Input */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="text"
+                  placeholder="Ask AI..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' ? sendMessage() : null}
+                  className="flex-1 px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-slate-50 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+                <button
+                  onClick={sendMessage}
+                  className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white transition-colors"
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? <Loader className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                </button>
               </div>
             </div>
-          ))}
 
-          {/* Loading indicator */}
-          {isLoading && (
-            <div className="flex items-start space-x-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-                <Bot className="w-4 h-4 text-white" />
+            {/* Workflow Explanation */}
+            {explanation && (
+              <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/40 rounded-2xl p-6 mt-6">
+                <h3 className="text-xl font-bold text-slate-50 mb-4">Explanation</h3>
+                <p className="text-slate-400">{explanation}</p>
               </div>
-              <div className="flex-1">
-                <div className="inline-block p-4 bg-slate-800/50 border border-slate-700/50 rounded-2xl">
-                  <div className="flex items-center space-x-2">
-                    <Loader className="w-4 h-4 animate-spin text-indigo-400" />
-                    <span className="text-slate-300">Thinking...</span>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Actions */}
+            <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/40 rounded-2xl p-6">
+              <h3 className="text-xl font-bold text-slate-50 mb-4">Actions</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={saveWorkflow}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-medium transition-colors"
+                  disabled={!workflow}
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Save Workflow</span>
+                </button>
+                <button
+                  onClick={clearChat}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-300 font-medium transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Clear Chat</span>
+                </button>
+                <button
+                  onClick={startStream}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg text-white font-medium transition-colors"
+                  disabled={isStreaming}
+                >
+                  {isStreaming ? <Loader className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+                  <span>Start Stream</span>
+                </button>
+              </div>
+            </div>
+
+            {/* History */}
+            <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/40 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-slate-50">History</h3>
+                <button onClick={toggleHistory} className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors">
+                  {showHistory ? <X className="w-4 h-4 text-slate-400" /> : <History className="w-4 h-4 text-slate-400" />}
+                </button>
+              </div>
+              {showHistory && (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {history.map((item, index) => (
+                    <div key={index} className="text-slate-400">{item}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Settings */}
+            <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/40 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-slate-50">Settings</h3>
+                <button onClick={toggleSettings} className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors">
+                  {isSettingsOpen ? <X className="w-4 h-4 text-slate-400" : null}
+                </button>
+              </div>
+              {isSettingsOpen && (
+                <div className="space-y-4">
+                  {/* MCP Server Configuration */}
+                  <div className="space-y-2">
+                    <h4 className="text-lg font-semibold text-slate-300">MCP Servers</h4>
+                    <div className="space-y-2">
+                      {mcpServers.map(server => (
+                        <div key={server.id} className="flex items-center justify-between">
+                          <div className="text-slate-400">{server.name}</div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleTestConnection(server.id)}
+                              className="p-1 hover:bg-slate-700/50 rounded-lg transition-colors"
+                              disabled={isTestingConnection && selectedServer === server.id}
+                            >
+                              {isTestingConnection && selectedServer === server.id ? (
+                                <Loader className="w-4 h-4 animate-spin text-slate-400" />
+                              ) : (
+                                <Power className="w-4 h-4 text-slate-400" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleRemoveServer(server.id)}
+                              className="p-1 hover:bg-slate-700/50 rounded-lg transition-colors text-red-400"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {connectionTestResults && selectedServer && (
+                      <div className="mt-2 p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
+                        {connectionTestResults.success ? (
+                          <div className="text-emerald-400 flex items-center space-x-2">
+                            <Check className="w-4 h-4" />
+                            <span>Connection successful!</span>
+                            {connectionTestResults.tools && connectionTestResults.tools.length > 0 && (
+                              <span>Tools: {connectionTestResults.tools.join(', ')}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-red-400 flex items-center space-x-2">
+                            <X className="w-4 h-4" />
+                            <span>Connection failed: {connectionTestResults.error}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add New Server Form */}
+                  <div className="space-y-2">
+                    <h4 className="text-lg font-semibold text-slate-300">Add New MCP Server</h4>
+                    <input
+                      type="text"
+                      placeholder="Server Name"
+                      value={newServerName}
+                      onChange={(e) => setNewServerName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-slate-50 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Server URL"
+                      value={newServerUrl}
+                      onChange={(e) => setNewServerUrl(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-slate-50 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                    <button
+                      onClick={handleAddServer}
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-medium transition-colors"
+                      disabled={isAddingServer}
+                    >
+                      {isAddingServer ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      <span>Add Server</span>
+                    </button>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Input Area */}
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/30">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-end space-x-4">
-            <div className="flex-1">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Describe the workflow you'd like to create..."
-                rows={1}
-                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-50 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none"
-                style={{ minHeight: '52px', maxHeight: '120px' }}
-              />
-            </div>
-            <button
-              onClick={handleSendMessage}
-              disabled={!input.trim() || isLoading}
-              className="p-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-xl transition-colors"
-            >
-              <Send className="w-5 h-5 text-white" />
-            </button>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

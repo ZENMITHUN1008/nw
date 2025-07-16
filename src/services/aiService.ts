@@ -3,79 +3,64 @@ import { supabase } from '../integrations/supabase/client';
 import { N8nService } from './n8nService';
 
 export interface AIWorkflowRequest {
-  description: string;
-  userId: string;
-  connectionId?: string;
+  prompt: string;
+  userContext?: any;
+  n8nConnectionId?: string;
 }
 
 export interface AIWorkflowResponse {
+  workflow: any;
+  explanation: string;
   success: boolean;
-  workflow?: any;
   error?: string;
-  suggestions?: string[];
 }
 
-export interface WorkflowTemplate {
+export interface MCPServerConfig {
   id: string;
   name: string;
-  description: string;
-  category: string;
-  nodes: any[];
-  connections: any[];
-  tags: string[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  estimatedTime: string;
+  url: string;
+  status: 'connected' | 'disconnected' | 'error';
+  tools: string[];
 }
 
 export class AIService {
-  private n8nService: N8nService;
+  private openaiApiKey: string;
 
-  constructor() {
-    this.n8nService = new N8nService('', '');
+  constructor(openaiApiKey: string) {
+    this.openaiApiKey = openaiApiKey;
   }
 
   async generateWorkflow(request: AIWorkflowRequest): Promise<AIWorkflowResponse> {
     try {
-      // For now, return a mock response since we don't have OpenAI integration yet
+      console.log('Generating workflow with prompt:', request.prompt);
+      
+      // Mock implementation for now
       const mockWorkflow = {
         id: `workflow_${Date.now()}`,
-        name: `AI Generated: ${request.description.slice(0, 50)}...`,
-        description: request.description,
+        name: `Generated Workflow - ${new Date().toLocaleDateString()}`,
+        description: `Workflow generated from: ${request.prompt.substring(0, 50)}...`,
         nodes: [
           {
-            id: 'trigger',
-            type: 'webhook',
-            name: 'Webhook Trigger',
-            position: [100, 100],
-            parameters: {
-              httpMethod: 'POST',
-              path: 'webhook'
-            }
+            id: 'start',
+            type: 'Manual Trigger',
+            name: 'Manual Trigger',
+            parameters: {}
           },
           {
             id: 'process',
-            type: 'function',
+            type: 'Function',
             name: 'Process Data',
-            position: [300, 100],
             parameters: {
-              functionCode: `
-                // Process the incoming data
-                const data = $input.all();
-                return data.map(item => ({
-                  ...item.json,
-                  processed: true,
-                  timestamp: new Date().toISOString()
-                }));
-              `
+              functionCode: `// Generated based on: ${request.prompt}\nreturn items;`
             }
           }
         ],
         connections: {
-          trigger: {
+          'Manual Trigger': {
             main: [
               [
                 {
-                  node: 'process',
+                  node: 'Process Data',
                   type: 'main',
                   index: 0
                 }
@@ -83,272 +68,179 @@ export class AIService {
             ]
           }
         },
-        active: false,
-        tags: ['ai-generated'],
         settings: {
           executionOrder: 'v1'
         }
       };
 
       return {
-        success: true,
         workflow: mockWorkflow,
-        suggestions: [
-          'Consider adding error handling nodes',
-          'Add data validation before processing',
-          'Include logging for debugging purposes'
-        ]
+        explanation: `Generated a workflow based on your request: "${request.prompt}". This workflow includes a manual trigger and a function node to process data according to your specifications.`,
+        success: true
       };
     } catch (error) {
+      console.error('Error generating workflow:', error);
       return {
+        workflow: null,
+        explanation: '',
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate workflow'
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
 
-  async getWorkflowTemplates(category?: string): Promise<WorkflowTemplate[]> {
+  async saveGeneratedWorkflow(workflow: any): Promise<{ success: boolean; error?: string }> {
     try {
-      // Mock templates for now
-      const templates: WorkflowTemplate[] = [
-        {
-          id: 'email-automation',
-          name: 'Email Automation',
-          description: 'Automatically send emails based on triggers',
-          category: 'communication',
-          nodes: [],
-          connections: [],
-          tags: ['email', 'automation', 'communication'],
-          difficulty: 'beginner',
-          estimatedTime: '15 minutes'
-        },
-        {
-          id: 'data-sync',
-          name: 'Data Synchronization',
-          description: 'Sync data between different platforms',
-          category: 'data',
-          nodes: [],
-          connections: [],
-          tags: ['sync', 'data', 'integration'],
-          difficulty: 'intermediate',
-          estimatedTime: '30 minutes'
-        },
-        {
-          id: 'social-media-posting',
-          name: 'Social Media Posting',
-          description: 'Automatically post to multiple social media platforms',
-          category: 'social',
-          nodes: [],
-          connections: [],
-          tags: ['social', 'posting', 'automation'],
-          difficulty: 'beginner',
-          estimatedTime: '20 minutes'
-        }
-      ];
-
-      if (category) {
-        return templates.filter(template => template.category === category);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
       }
 
-      return templates;
+      // Since we don't have ai_generated_workflows table, we'll just log for now
+      console.log('Would save workflow:', workflow);
+      
+      return { success: true };
     } catch (error) {
-      console.error('Error fetching workflow templates:', error);
+      console.error('Error saving workflow:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to save workflow' 
+      };
+    }
+  }
+
+  async getGeneratedWorkflows(): Promise<any[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      // Since we don't have ai_generated_workflows table, return empty array
+      console.log('Would fetch workflows for user:', user.id);
+      return [];
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
       return [];
     }
   }
 
-  async analyzeWorkflow(_workflow: any): Promise<{
-    suggestions: string[];
-    optimizations: string[];
-    issues: string[];
-  }> {
+  async getMCPServers(): Promise<MCPServerConfig[]> {
     try {
-      // Mock analysis for now
-      return {
-        suggestions: [
-          'Add error handling to prevent workflow failures',
-          'Consider adding data validation nodes',
-          'Include logging for better debugging'
-        ],
-        optimizations: [
-          'Combine similar operations to reduce execution time',
-          'Use batch processing for large datasets',
-          'Cache frequently accessed data'
-        ],
-        issues: [
-          'Missing error handling in critical nodes',
-          'Potential infinite loop detected',
-          'High memory usage in data processing node'
-        ]
-      };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('mcp_servers')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      return (data || []).map(server => ({
+        id: server.id,
+        name: server.name,
+        url: server.url,
+        status: server.status as 'connected' | 'disconnected' | 'error',
+        tools: server.tools as string[] || []
+      }));
     } catch (error) {
-      console.error('Error analyzing workflow:', error);
-      return {
-        suggestions: [],
-        optimizations: [],
-        issues: []
-      };
+      console.error('Error fetching MCP servers:', error);
+      return [];
     }
   }
 
-  async saveWorkflowToDatabase(workflow: any, userId: string): Promise<{ success: boolean; error?: string }> {
+  async addMCPServer(name: string, url: string, authToken?: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Use conversation_memory table instead of non-existent ai_generated_workflows
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
       const { error } = await supabase
-        .from('conversation_memory')
+        .from('mcp_servers')
         .insert([{
-          user_id: userId,
-          session_id: `workflow_${Date.now()}`,
-          messages: [workflow],
-          context: {
-            type: 'ai_generated_workflow',
-            name: workflow.name,
-            description: workflow.description,
-            tags: workflow.tags || []
-          }
+          user_id: user.id,
+          name,
+          url,
+          authorization_token: authToken,
+          status: 'disconnected',
+          tools: [],
+          tool_configuration: { enabled: true }
         }]);
 
-      if (error) {
-        return { success: false, error: error.message };
-      }
+      if (error) throw error;
 
       return { success: true };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to save workflow'
+      console.error('Error adding MCP server:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to add MCP server' 
       };
     }
   }
 
-  async getUserWorkflows(userId: string): Promise<any[]> {
+  async removeMCPServer(serverId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data, error } = await supabase
-        .from('conversation_memory')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('context->type', 'ai_generated_workflow')
-        .order('created_at', { ascending: false });
+      const { error } = await supabase
+        .from('mcp_servers')
+        .delete()
+        .eq('id', serverId);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      return data || [];
+      return { success: true };
     } catch (error) {
-      console.error('Error fetching user workflows:', error);
-      return [];
+      console.error('Error removing MCP server:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to remove MCP server' 
+      };
     }
   }
 
-  async improveWorkflowDescription(description: string): Promise<{
-    improved: string;
-    suggestions: string[];
-  }> {
+  async testMCPConnection(serverId: string): Promise<{ success: boolean; error?: string; tools?: string[] }> {
     try {
-      // Mock improvement for now
-      const improved = `Enhanced: ${description}. This workflow will include proper error handling, data validation, and logging capabilities for optimal performance and reliability.`;
+      // Mock implementation - in real app, this would test the actual connection
+      console.log('Testing MCP server connection:', serverId);
       
       return {
-        improved,
-        suggestions: [
-          'Be more specific about data sources and destinations',
-          'Include error handling requirements',
-          'Specify expected data formats and volumes',
-          'Mention any security or compliance requirements'
-        ]
+        success: true,
+        tools: ['example-tool-1', 'example-tool-2']
       };
     } catch (error) {
-      return {
-        improved: description,
-        suggestions: []
+      console.error('Error testing MCP connection:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Connection test failed' 
       };
     }
   }
 
-  async validateWorkflow(workflow: any): Promise<{
-    isValid: boolean;
-    errors: string[];
-    warnings: string[];
-  }> {
-    try {
-      const errors: string[] = [];
-      const warnings: string[] = [];
-
-      // Basic validation
-      if (!workflow.nodes || workflow.nodes.length === 0) {
-        errors.push('Workflow must contain at least one node');
-      }
-
-      if (!workflow.name || workflow.name.trim() === '') {
-        errors.push('Workflow must have a name');
-      }
-
-      // Check for orphaned nodes
-      const connectedNodes = new Set();
-      if (workflow.connections) {
-        Object.values(workflow.connections).forEach((connections: any) => {
-          if (connections.main) {
-            connections.main.forEach((mainConnections: any[]) => {
-              mainConnections.forEach((connection: any) => {
-                connectedNodes.add(connection.node);
-              });
-            });
+  async generateWorkflowStream() {
+    // Mock implementation for streaming
+    return new ReadableStream({
+      start(controller) {
+        const chunks = [
+          'Analyzing your request...\n',
+          'Generating workflow structure...\n',
+          'Adding nodes and connections...\n',
+          'Finalizing workflow...\n',
+          'Complete!'
+        ];
+        
+        let index = 0;
+        const interval = setInterval(() => {
+          if (index < chunks.length) {
+            controller.enqueue(new TextEncoder().encode(chunks[index]));
+            index++;
+          } else {
+            controller.close();
+            clearInterval(interval);
           }
-        });
+        }, 1000);
       }
-
-      const orphanedNodes = workflow.nodes.filter((node: any) => 
-        node.type !== 'trigger' && !connectedNodes.has(node.id)
-      );
-
-      if (orphanedNodes.length > 0) {
-        warnings.push(`Found ${orphanedNodes.length} orphaned node(s) that are not connected`);
-      }
-
-      return {
-        isValid: errors.length === 0,
-        errors,
-        warnings
-      };
-    } catch (error) {
-      return {
-        isValid: false,
-        errors: ['Failed to validate workflow'],
-        warnings: []
-      };
-    }
-  }
-
-  async testConnection(): Promise<{ success: boolean; error?: string }> {
-    try {
-      // Mock test connection for now
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Connection test failed'
-      };
-    }
-  }
-
-  async generateWorkflowStream(request: AIWorkflowRequest): Promise<AsyncGenerator<string, void, unknown>> {
-    // Mock streaming response
-    return (async function* () {
-      const chunks = [
-        'Analyzing your request...',
-        'Generating workflow structure...',
-        'Adding nodes and connections...',
-        'Finalizing workflow...',
-        'Workflow generated successfully!'
-      ];
-      
-      for (const chunk of chunks) {
-        yield chunk;
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    })();
+    });
   }
 }
 
-export const aiService = new AIService();
+export const aiService = new AIService('');

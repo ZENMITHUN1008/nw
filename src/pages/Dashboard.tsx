@@ -14,7 +14,7 @@ export const Dashboard: React.FC = () => {
   const [showConnectionSetup, setShowConnectionSetup] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [filterTags] = useState<string[]>([]);
 
   useEffect(() => {
     if (connections.length === 0 && !loading) {
@@ -49,6 +49,17 @@ export const Dashboard: React.FC = () => {
   const handleRemoveTag = (workflowId: string, tagIndex: number) => {
     console.log('Remove tag from workflow:', workflowId, tagIndex);
   };
+
+  // Transform n8n workflows to match expected interface
+  const transformedWorkflows = workflows.map(workflow => ({
+    id: workflow.id,
+    name: workflow.name,
+    description: `Workflow with ${workflow.nodes?.length || 0} nodes`,
+    isActive: workflow.active,
+    createdAt: workflow.createdAt,
+    updatedAt: workflow.updatedAt,
+    tags: workflow.tags || []
+  }));
 
   if (loading) {
     return (
@@ -214,7 +225,7 @@ export const Dashboard: React.FC = () => {
               
               {viewMode === 'grid' ? (
                 <WorkflowGrid
-                  workflows={workflows}
+                  workflows={transformedWorkflows}
                   filterTags={filterTags}
                   searchTerm={searchTerm}
                   onSearchChange={setSearchTerm}
@@ -222,12 +233,10 @@ export const Dashboard: React.FC = () => {
                   onDelete={handleDelete}
                   onDuplicate={handleDuplicate}
                   onViewDetails={handleViewDetails}
-                  onAddTag={handleAddTag}
-                  onRemoveTag={handleRemoveTag}
                 />
               ) : (
                 <WorkflowList
-                  workflows={workflows}
+                  workflows={transformedWorkflows}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onDuplicate={handleDuplicate}

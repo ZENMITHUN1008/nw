@@ -45,7 +45,7 @@ export interface Connection {
   last_connected: string | null;
   status?: string;
   workflowCount?: number;
-  lastConnected?: Date | string;
+  lastConnected?: string | null;
   name: string;
   createdAt?: Date;
 }
@@ -60,26 +60,12 @@ export interface Execution {
   error: any;
 }
 
-export interface N8nExecution {
-  id: string;
-  workflowId: string;
-  startedAt: string;
-  stoppedAt: string;
-  status: string;
-  data: any;
-  error: any;
-}
-
 export class N8nService {
-  private baseUrl: string;
-  private apiKey: string;
-
-  constructor(baseUrl: string, apiKey: string) {
-    this.baseUrl = baseUrl;
-    this.apiKey = apiKey;
+  constructor() {
+    // No parameters needed since we're not storing them
   }
 
-  async testConnection(baseUrl: string, apiKey: string, _instanceName: string): Promise<{ success: boolean; error?: string; data?: any }> {
+  async testConnection(baseUrl: string, apiKey: string, instanceName: string): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
       const response = await fetch(`${baseUrl}/api/v1/workflows`, {
         headers: {
@@ -182,31 +168,31 @@ export class N8nService {
     return [];
   }
 
-  async createWorkflow(_workflow: any): Promise<Workflow> {
+  async createWorkflow(): Promise<Workflow> {
     throw new Error('Not implemented');
   }
 
-  async updateWorkflow(_workflowId: string, _workflow: any): Promise<Workflow> {
+  async updateWorkflow(): Promise<Workflow> {
     throw new Error('Not implemented');
   }
 
-  async deleteWorkflow(_workflowId: string): Promise<void> {
+  async deleteWorkflow(): Promise<void> {
     throw new Error('Not implemented');
   }
 
-  async activateWorkflow(_workflowId: string): Promise<void> {
+  async activateWorkflow(): Promise<void> {
     throw new Error('Not implemented');
   }
 
-  async deactivateWorkflow(_workflowId: string): Promise<void> {
+  async deactivateWorkflow(): Promise<void> {
     throw new Error('Not implemented');
   }
 
-  async executeWorkflow(_workflowId: string, _data: any = {}): Promise<Execution> {
+  async executeWorkflow(): Promise<Execution> {
     throw new Error('Not implemented');
   }
 
-  async getExecutions(_workflowId?: string, _limit: number = 20): Promise<Execution[]> {
+  async getExecutions(): Promise<Execution[]> {
     return [];
   }
 
@@ -215,4 +201,4 @@ export class N8nService {
   }
 }
 
-export const n8nService = new N8nService('', '');
+export const n8nService = new N8nService();

@@ -21,8 +21,6 @@ interface WorkflowGridProps {
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
   onViewDetails: (id: string) => void;
-  onAddTag: (workflowId: string, tag: string) => void;
-  onRemoveTag: (workflowId: string, tagIndex: number) => void;
 }
 
 export const WorkflowGrid: React.FC<WorkflowGridProps> = ({
@@ -33,9 +31,7 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({
   onEdit,
   onDelete,
   onDuplicate,
-  onViewDetails,
-  onAddTag,
-  onRemoveTag
+  onViewDetails
 }) => {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
 
