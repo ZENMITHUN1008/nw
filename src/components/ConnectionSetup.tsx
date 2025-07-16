@@ -10,11 +10,9 @@ import { useN8n } from "@/hooks/useN8n";
 
 interface ConnectionSetupProps {
   onBack: () => void;
-  onSkip?: () => void;
-  onSuccess?: () => void;
 }
 
-export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onBack, onSkip, onSuccess }) => {
+export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onBack }) => {
   const [instanceName, setInstanceName] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -112,11 +110,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onBack, onSkip
         description: "Connection saved successfully!",
       });
 
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        onBack();
-      }
+      onBack();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -149,7 +143,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onBack, onSkip
               type="text"
               placeholder="My n8n Instance"
               value={instanceName}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInstanceName(e.target.value)}
+              onChange={(e) => setInstanceName(e.target.value)}
             />
           </div>
 
@@ -162,7 +156,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onBack, onSkip
               type="url"
               placeholder="https://your-n8n-instance.com"
               value={baseUrl}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBaseUrl(e.target.value)}
+              onChange={(e) => setBaseUrl(e.target.value)}
             />
           </div>
 
@@ -175,7 +169,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onBack, onSkip
               type="password"
               placeholder="Your n8n API key"
               value={apiKey}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApiKey(e.target.value)}
+              onChange={(e) => setApiKey(e.target.value)}
             />
           </div>
 
@@ -210,14 +204,6 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onBack, onSkip
             >
               Save Connection
             </Button>
-            {onSkip && (
-              <Button
-                onClick={onSkip}
-                variant="outline"
-              >
-                Skip for now
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
