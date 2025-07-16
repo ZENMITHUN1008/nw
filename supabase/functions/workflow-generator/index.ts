@@ -5,11 +5,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 };
-// Claude API configuration
-const CLAUDE_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-// Default model that supports web search
-const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
+
+// Gemini API configuration
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API');
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+// Available Gemini models in order of preference (fallback)
+const GEMINI_MODELS = [
+  'gemini-2.0-flash-exp',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+  'gemini-1.0-pro'
+];
 
 // n8n node templates for different services
 const nodeTemplates = {
@@ -101,14 +108,17 @@ return items.map(item => {
     }
   }
 };
-serve(async (req)=>{
+
+serve(async (req) => {
   console.log(`${req.method} ${req.url}`);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
       headers: corsHeaders
     });
   }
+  
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({
       error: 'Method not allowed'
@@ -120,9 +130,14 @@ serve(async (req)=>{
       }
     });
   }
+  
   try {
     // Initialize Supabase client for auth verification
-    const supabaseClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '', 
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
     // Get user from Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -137,7 +152,11 @@ serve(async (req)=>{
         }
       });
     }
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(authHeader.replace('Bearer ', ''));
+    
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    
     if (authError || !user) {
       console.error('Invalid authorization:', authError?.message);
       return new Response(JSON.stringify({
@@ -150,8 +169,9 @@ serve(async (req)=>{
         }
       });
     }
-    if (!CLAUDE_API_KEY) {
-      console.error('Claude API key not configured');
+    
+    if (!GEMINI_API_KEY) {
+      console.error('Gemini API key not configured');
       return new Response(JSON.stringify({
         error: 'AI service not properly configured'
       }), {
@@ -159,13 +179,15 @@ serve(async (req)=>{
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json'
-          
         }
       });
     }
+    
     const requestBody = await req.json();
     console.log('Request body:', requestBody);
+    
     const { message, chatHistory = [], selectedWorkflow, action, workflowContext, credentials } = requestBody;
+    
     if (!message) {
       return new Response(JSON.stringify({
         error: 'Message is required'
@@ -177,6 +199,7 @@ serve(async (req)=>{
         }
       });
     }
+    
     // Fetch user's MCP servers
     const { data: mcpServers, error: mcpError } = await supabaseClient
       .from('mcp_servers')
@@ -188,91 +211,88 @@ serve(async (req)=>{
       console.error('Error fetching MCP servers:', mcpError);
     }
 
-    // Build the enhanced prompt based on action type
+    // Build the enhanced prompt based on action type (keeping Claude prompts)
     const systemPrompt = buildEnhancedSystemPrompt(action, selectedWorkflow, workflowContext, credentials);
     const userPrompt = buildEnhancedUserPrompt(message, action, selectedWorkflow, credentials);
-    // Determine if we need web search based on the request
-    const needsWebSearch = shouldUseWebSearch(message, action);
-    // Build tools array (only web search now)
-    const tools: any[] = [];
-    if (needsWebSearch) {
-      tools.push({
-        type: "web_search_20250305",
-        name: "web_search",
-        max_uses: 3
-      });
-    }
-
-    // Prepare MCP servers for Claude API
-    const mcpServersForClaude = (mcpServers || [])
-      .filter(server => {
-        // Include servers without tool_configuration (defaults to enabled)
-        // Only exclude if explicitly disabled
-        return server.tool_configuration?.enabled !== false;
-      })
-      .map(server => ({
-        type: "url",
-        url: server.url,
-        name: server.name,
-        authorization_token: server.authorization_token,
-        ...(server.tool_configuration && { tool_configuration: server.tool_configuration })
-      }));
-    // Prepare messages for Claude
+    
+    // Prepare messages for Gemini
     const messages = [
-      ...chatHistory.map((msg)=>({
-          role: msg.role === 'user' ? 'user' : 'assistant',
-          content: msg.content
-        })),
+      ...chatHistory.map((msg) => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      })),
       {
         role: "user",
-        content: userPrompt
+        parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }]
       }
     ];
-    console.log('Calling Claude API with tools:', tools.map((t)=>t.name));
-    // Call Claude API with streaming and web search tool
-    const claudeResponse = await fetch(CLAUDE_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-        "anthropic-beta": "mcp-client-2025-04-04"
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        max_tokens: 8000,
-        system: systemPrompt,
-        messages: messages,
-        stream: true,
-        temperature: 0.3,
-        tools: tools.length > 0 ? tools : undefined,
-        mcp_servers: mcpServersForClaude.length > 0 ? mcpServersForClaude : undefined
-      })
-    });
-    if (!claudeResponse.ok) {
-      const errorText = await claudeResponse.text();
-      console.error('Claude API error:', claudeResponse.status, errorText);
-      throw new Error(`Claude API error: ${claudeResponse.status} ${claudeResponse.statusText}`);
+    
+    console.log('Calling Gemini API with model fallback');
+    
+    // Try models with fallback
+    let geminiResponse = null;
+    let currentModelIndex = 0;
+    
+    while (currentModelIndex < GEMINI_MODELS.length && !geminiResponse) {
+      const currentModel = GEMINI_MODELS[currentModelIndex];
+      console.log(`Trying model: ${currentModel}`);
+      
+      try {
+        const response = await fetch(`${GEMINI_API_URL}/${currentModel}:streamGenerateContent?key=${GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: messages,
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 8000,
+            }
+          })
+        });
+        
+        if (response.ok) {
+          geminiResponse = response;
+          console.log(`Successfully connected with model: ${currentModel}`);
+          break;
+        } else if (response.status === 429 || response.status === 503) {
+          console.log(`Model ${currentModel} is overloaded, trying next model...`);
+          currentModelIndex++;
+        } else {
+          throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error(`Error with model ${currentModel}:`, error);
+        currentModelIndex++;
+      }
     }
-    console.log('Claude API response received, starting stream');
-    // Create a readable stream to handle Claude's streaming response with web search
+    
+    if (!geminiResponse) {
+      throw new Error('All Gemini models are currently unavailable');
+    }
+    
+    console.log('Gemini API response received, starting stream');
+    
+    // Create a readable stream to handle Gemini's streaming response
     const readable = new ReadableStream({
-      start (controller) {
-        const reader = claudeResponse.body?.getReader();
+      start(controller) {
+        const reader = geminiResponse.body?.getReader();
         if (!reader) {
-          console.error('No reader available from Claude response');
+          console.error('No reader available from Gemini response');
           controller.close();
           return;
         }
+        
         const decoder = new TextDecoder();
         let buffer = '';
         let fullContent = '';
-        let currentToolUse = null;
-        const pump = async ()=>{
+        
+        const pump = async () => {
           try {
             const { done, value } = await reader.read();
             if (done) {
-              console.log('Claude stream finished, full content length:', fullContent.length);
+              console.log('Gemini stream finished, full content length:', fullContent.length);
               // Try to extract workflow from full content before closing
               const workflowData = extractWorkflowFromContent(fullContent);
               if (workflowData) {
@@ -285,92 +305,48 @@ serve(async (req)=>{
               controller.close();
               return;
             }
-            buffer += decoder.decode(value, {
-              stream: true
-            });
+            
+            buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
             buffer = lines.pop() || '';
-            for (const line of lines){
+            
+            for (const line of lines) {
               if (line.startsWith('data: ')) {
                 const data = line.slice(6).trim();
                 if (data === '[DONE]') {
-                  console.log('Received [DONE] from Claude');
+                  console.log('Received [DONE] from Gemini');
                   controller.close();
                   return;
                 }
+                
                 try {
                   const parsed = JSON.parse(data);
-                  // Handle regular text content
-                  if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                    const textContent = parsed.delta.text;
-                    fullContent += textContent;
-                    // Send the text chunk
-                    const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
-                      type: 'text',
-                      content: textContent
-                    })}\n\n`);
-                    controller.enqueue(chunk);
-                  } else if (parsed.type === 'content_block_start' && 
-                           (parsed.content_block?.type === 'server_tool_use' || parsed.content_block?.type === 'mcp_tool_use')) {
-                    currentToolUse = parsed.content_block;
-                    console.log('Tool use started:', currentToolUse?.name, 'type:', currentToolUse?.type);
-                    // Send tool use start indicator
-                    if (currentToolUse && currentToolUse?.name && currentToolUse?.id) {
-                    const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
-                      type: 'tool_start',
-                      content: {
-                        tool: currentToolUse.name,
-                        id: currentToolUse.id,
-                        server_name: currentToolUse.server_name || 'unknown'
-                      }
-                    })}\n\n`);
-                    controller.enqueue(chunk);
-                    }
-                  } else if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'input_json_delta') {
-                    // Send tool input update
-                    const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
-                      type: 'tool_input',
-                      content: parsed.delta.partial_json
-                    })}\n\n`);
-                    controller.enqueue(chunk);
-                  } else if (parsed.type === 'content_block_start' && 
-                           (parsed.content_block?.type === 'web_search_tool_result' || parsed.content_block?.type === 'mcp_tool_result')) {
-                    console.log('Tool result received:', parsed.content_block?.type);
-                    const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
-                      type: 'tool_result',
-                      content: {
-                        tool: parsed.content_block.type === 'mcp_tool_result' ? 'mcp' : 'web_search',
-                        result: parsed.content_block.content,
-                        ...(parsed.content_block.tool_use_id && { tool_use_id: parsed.content_block.tool_use_id }),
-                        ...(parsed.content_block.is_error && { is_error: parsed.content_block.is_error })
-                      }
-                    })}\n\n`);
-                    controller.enqueue(chunk);
-                  } else if (parsed.type === 'message_stop') {
-                    console.log('Message stopped, extracting workflow from content');
-                    const workflowData = extractWorkflowFromContent(fullContent);
-                    if (workflowData) {
+                  
+                  // Handle Gemini response format
+                  if (parsed.candidates && parsed.candidates[0]?.content?.parts) {
+                    const textContent = parsed.candidates[0].content.parts[0]?.text || '';
+                    if (textContent) {
+                      fullContent += textContent;
+                      // Send the text chunk
                       const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
-                        type: 'workflow',
-                        content: workflowData
+                        type: 'text',
+                        content: textContent
                       })}\n\n`);
                       controller.enqueue(chunk);
                     }
-                    controller.close();
-                    return;
-                  } else if (parsed.type === 'error') {
-                    console.error('Claude API error:', parsed);
+                  } else if (parsed.error) {
+                    console.error('Gemini API error:', parsed);
                     const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
                       type: 'error',
-                      content: `Claude API error: ${parsed.error?.message || 'Unknown error'}`
+                      content: `Gemini API error: ${parsed.error?.message || 'Unknown error'}`
                     })}\n\n`);
                     controller.enqueue(chunk);
                     controller.close();
                     return;
                   }
                 } catch (e) {
-                  console.error('Error parsing Claude response:', e, 'Data:', data);
-                // Don't break the stream for parsing errors
+                  console.error('Error parsing Gemini response:', e, 'Data:', data);
+                  // Don't break the stream for parsing errors
                 }
               }
             }
@@ -385,9 +361,11 @@ serve(async (req)=>{
             controller.close();
           }
         };
+        
         pump();
       }
     });
+    
     return new Response(readable, {
       headers: {
         ...corsHeaders,
@@ -396,6 +374,7 @@ serve(async (req)=>{
         'Connection': 'keep-alive'
       }
     });
+    
   } catch (error) {
     console.error('Error in AI workflow generator:', error);
     return new Response(JSON.stringify({
@@ -410,10 +389,6 @@ serve(async (req)=>{
     });
   }
 });
-
-
-
-
 
 function buildEnhancedSystemPrompt(action, selectedWorkflow, workflowContext, credentials) {
   const basePrompt = `You are WorkFlow AI, an expert n8n automation engineer. Your job is to create production-ready workflows FAST.
