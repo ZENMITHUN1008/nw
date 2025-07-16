@@ -1,3 +1,4 @@
+
 import { supabase } from "../integrations/supabase/client";
 import { n8nService } from "./n8nService";
 
@@ -56,6 +57,8 @@ class AIService {
 
   async generateWorkflow(request: WorkflowGenerationRequest): Promise<WorkflowGenerationResponse> {
     try {
+      console.log('Calling workflow-generator function with:', request);
+      
       const response = await supabase.functions.invoke('workflow-generator', {
         body: {
           message: request.description,
@@ -65,11 +68,18 @@ class AIService {
         }
       });
 
+      console.log('AI service response:', response);
+
       if (response.error) {
-        throw new Error(`AI service error: ${response.error.message}`);
+        console.error('AI service error:', response.error);
+        throw new Error(`AI service error: ${response.error.message || 'Unknown error'}`);
       }
 
-      const workflow = response.data?.workflow || {
+      if (!response.data) {
+        throw new Error('No data received from AI service');
+      }
+
+      const workflow = response.data.workflow || {
         name: "Generated Workflow",
         nodes: [],
         connections: {}
@@ -92,8 +102,8 @@ class AIService {
 
       return {
         workflow,
-        explanation: response.data?.explanation || 'Workflow generated successfully',
-        estimatedComplexity: response.data?.estimatedComplexity || 'medium',
+        explanation: response.data.explanation || 'Workflow generated successfully',
+        estimatedComplexity: response.data.estimatedComplexity || 'medium',
         deploymentResult
       };
     } catch (error) {
@@ -104,6 +114,8 @@ class AIService {
 
   async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<StreamChunk, void, unknown> {
     try {
+      console.log('Starting workflow stream generation with:', request);
+      
       // Use supabase.functions.invoke for proper authentication
       const response = await supabase.functions.invoke('workflow-generator', {
         body: {
@@ -115,8 +127,11 @@ class AIService {
         }
       });
 
+      console.log('Stream response:', response);
+
       if (response.error) {
-        throw new Error(`AI service error: ${response.error.message}`);
+        console.error('AI service error:', response.error);
+        throw new Error(`AI service error: ${response.error.message || 'Unknown error'}`);
       }
 
       // Since we're not getting a stream from supabase.functions.invoke,
@@ -142,6 +157,9 @@ class AIService {
             }
           }
         }
+      } else {
+        // Fallback response if no data
+        yield { type: 'text', content: 'I apologize, but I couldn\'t generate a response. Please try again.' };
       }
 
       yield { type: 'complete', content: '' };
@@ -155,6 +173,8 @@ class AIService {
 
   async chat(messages: ChatMessage[]): Promise<ChatMessage> {
     try {
+      console.log('Chat request with messages:', messages);
+      
       const response = await supabase.functions.invoke('workflow-generator', {
         body: {
           message: messages[messages.length - 1]?.content || '',
@@ -163,13 +183,16 @@ class AIService {
         }
       });
 
+      console.log('Chat response:', response);
+
       if (response.error) {
-        throw new Error(`AI service error: ${response.error.message}`);
+        console.error('AI service error:', response.error);
+        throw new Error(`AI service error: ${response.error.message || 'Unknown error'}`);
       }
 
       return {
         role: 'assistant',
-        content: response.data?.content || 'I apologize, but I couldn\'t generate a response.',
+        content: response.data?.content || response.data?.explanation || 'I apologize, but I couldn\'t generate a response.',
         timestamp: new Date()
       };
     } catch (error) {
