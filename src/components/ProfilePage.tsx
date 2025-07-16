@@ -83,6 +83,7 @@ const ProfilePage: React.FC = () => {
 
   const loadUserProfile = async () => {
     try {
+      if (!supabase) return;
       const { data } = await supabase
         .from('profiles')
         .select('*')
@@ -100,6 +101,7 @@ const ProfilePage: React.FC = () => {
 
   const loadUserSettings = async () => {
     try {
+      if (!supabase) return;
       const { data } = await supabase
         .from('user_settings')
         .select('*')
@@ -119,6 +121,7 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
 
     try {
+      if (!supabase) throw new Error('Supabase not configured');
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -147,6 +150,7 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
 
     try {
+      if (!supabase) throw new Error('Supabase not configured');
       const { error } = await supabase
         .from('user_settings')
         .upsert({

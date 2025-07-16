@@ -39,6 +39,7 @@ export interface N8nExecution {
 
 class N8nService {
   private async getAuthHeaders() {
+    if (!supabase) throw new Error('Supabase not configured');
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error('Not authenticated');
@@ -74,6 +75,7 @@ class N8nService {
   // Database operations
   // @ts-expect-error - keeping for future functionality
   private async _saveConnectionToDb(connection: Partial<N8nConnection>) {
+    if (!supabase) throw new Error('Supabase not configured');
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -253,6 +255,7 @@ class N8nService {
 
   // Get active connection for API calls
   private async getActiveConnection(): Promise<N8nConnection> {
+    if (!supabase) throw new Error('Supabase not configured');
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
@@ -277,13 +280,15 @@ class N8nService {
       
       // Update last connected timestamp
       const connection = await this.getActiveConnection();
-      await supabase
+      if (supabase) {
+        await supabase
         .from('n8n_connections')
         .update({ 
           last_connected: new Date().toISOString(),
           connection_status: 'connected'
         })
         .eq('id', connection.id);
+      }
 
       return Array.isArray(response) ? response : response.data || [];
     } catch (error) {

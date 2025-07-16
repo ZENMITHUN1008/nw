@@ -43,6 +43,7 @@ class AIService {
   }
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
+    if (!supabase) throw new Error('Supabase not configured');
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {

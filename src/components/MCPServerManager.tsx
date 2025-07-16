@@ -131,6 +131,11 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
     try {
       console.log('=== MCP DEBUG START ===');
       
+      if (!supabase) {
+        console.log('Supabase not configured');
+        return;
+      }
+      
       // Check current user
       const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
       console.log('Current user from auth:', currentUser?.id, userError);
@@ -177,8 +182,8 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
   try {
     console.log('Loading MCP servers for user:', user?.id);
     
-    if (!user?.id) {
-      console.error('No user ID available');
+    if (!user?.id || !supabase) {
+      console.error('No user ID available or Supabase not configured');
       setServers([]);
       return;
     }
@@ -265,6 +270,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
     };
 
     if (editingServer?.id) {
+      if (!supabase) throw new Error('Supabase not configured');
       const { error } = await supabase
         .from('mcp_servers')
         .update(serverData)
@@ -272,6 +278,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
 
       if (error) throw error;
     } else {
+      if (!supabase) throw new Error('Supabase not configured');
       const { error } = await supabase
         .from('mcp_servers')
         .insert([serverData]);
@@ -291,6 +298,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
     if (!confirm('Are you sure you want to delete this MCP server?')) return;
 
     try {
+      if (!supabase) throw new Error('Supabase not configured');
       const { error } = await supabase
         .from('mcp_servers')
         .delete()
@@ -311,7 +319,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          'Authorization': `Bearer ${supabase ? (await supabase.auth.getSession()).data.session?.access_token : ''}`
         },
         body: JSON.stringify({
           url: server.url,
@@ -325,7 +333,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
 
       const result = await response.json();
       
-      if (result.success) {
+      if (result.success && supabase) {
         await supabase
           .from('mcp_servers')
           .update({ 

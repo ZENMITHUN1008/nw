@@ -99,7 +99,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       
       if (error) {
         setErrors({ general: error.message });
-      } else if (mode === 'signup' && !data.session) {
+      } else if (mode === 'signup' && data && !data.session) {
         // Email verification required
         setShowSuccess(true);
       } else {
