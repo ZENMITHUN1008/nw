@@ -1,4 +1,3 @@
-
 import { supabase } from "../integrations/supabase/client";
 
 export interface ChatMessage {
@@ -34,6 +33,10 @@ export interface StreamChunk {
   type: 'text' | 'workflow' | 'error' | 'complete' | 'tool_start' | 'tool_input' | 'tool_result';
   content: string | any;
 }
+
+// Supabase configuration constants
+const SUPABASE_URL = "https://kqemyueobhimorhdxodh.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxZW15dWVvYmhpbW9yaGR4b2RoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2NDU5MjEsImV4cCI6MjA2ODIyMTkyMX0.maTYK02fvFR-qfqqQaI0O_LxCJ8tHZ1MBLvZkJcqfhk";
 
 class AIService {
   async testConnection(): Promise<boolean> {
@@ -84,11 +87,11 @@ class AIService {
 
   async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<StreamChunk, void, unknown> {
     try {
-      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/workflow-generator`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/workflow-generator`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}`,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           message: request.message || request.description,
@@ -145,7 +148,8 @@ class AIService {
       }
     } catch (error) {
       console.error('Error in streaming workflow generation:', error);
-      yield { type: 'error', content: error.message };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      yield { type: 'error', content: errorMessage };
     }
   }
 
