@@ -23,6 +23,12 @@ export interface AIWorkflowRequest {
   requirements?: string[];
   integrations?: string[];
   message?: string;
+  chatHistory?: ChatMessage[];
+}
+
+export interface StreamChunk {
+  type: 'text' | 'error' | 'complete';
+  content: string;
 }
 
 class AIService {
@@ -132,7 +138,7 @@ class AIService {
     }
   }
 
-  async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<string, void, unknown> {
+  async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<StreamChunk, void, unknown> {
     if (!this.apiKey) {
       throw new Error('OpenAI API key not configured. Please add your API key in settings.');
     }
@@ -175,7 +181,10 @@ class AIService {
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          yield { type: 'complete', content: '' };
+          break;
+        }
 
         const chunk = decoder.decode(value);
         const lines = chunk.split('\n');
@@ -183,13 +192,16 @@ class AIService {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
-            if (data === '[DONE]') return;
+            if (data === '[DONE]') {
+              yield { type: 'complete', content: '' };
+              return;
+            }
 
             try {
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) {
-                yield content;
+                yield { type: 'text', content };
               }
             } catch (e) {
               // Skip invalid JSON chunks
