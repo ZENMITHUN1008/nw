@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Mic, Play, BarChart3, Globe, Zap, Infinity, Rocket, ChevronDown } from 'lucide-react';
 import {AuthModal} from './AuthModal';
@@ -11,6 +12,7 @@ interface HeroSectionProps {
 const HeroSection: React.FC<HeroSectionProps> = ({ onDashboardClick }) => {
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
   const [scrolled, setScrolled] = useState(false);
   const [animateStats, setAnimateStats] = useState(false);
   const { user, loading } = useAuth();
@@ -39,12 +41,11 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onDashboardClick }) => {
     };
   }, []);
 
- 
-
   const handleStartBuildingClick = () => {
     if (user && onDashboardClick) {
       onDashboardClick();
     } else {
+      setAuthMode('signup');
       setIsAuthModalOpen(true);
     }
   };
@@ -113,6 +114,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onDashboardClick }) => {
                 <span>{user ? 'Go to Dashboard' : 'Start Building'}</span>
               </button>
             )}
+            
             <button 
               className="group border border-slate-600 hover:border-indigo-500/50 text-slate-300 hover:text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-300 hover:bg-slate-800/50 backdrop-blur-sm flex items-center space-x-3 hover:translate-y-[-2px] active:translate-y-0"
               aria-label="View Demo"
@@ -182,7 +184,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onDashboardClick }) => {
         <AuthModal 
           isOpen={isAuthModalOpen} 
           onClose={() => setIsAuthModalOpen(false)} 
-         
+          mode={authMode}
+          onModeChange={setAuthMode}
         />
       )}
     </>

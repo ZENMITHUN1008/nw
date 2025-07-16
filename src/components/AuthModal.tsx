@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { X, Eye, EyeOff, Mail, Lock, User, Github } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -5,22 +6,30 @@ import { supabase } from "@/integrations/supabase/client";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: 'signin' | 'signup';
-  onModeChange: (mode: 'signin' | 'signup') => void;
+  mode?: 'signin' | 'signup';
+  onModeChange?: (mode: 'signin' | 'signup') => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ 
   isOpen, 
   onClose, 
-  mode, 
+  mode: initialMode = 'signin', 
   onModeChange 
 }) => {
+  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleModeChange = (newMode: 'signin' | 'signup') => {
+    setMode(newMode);
+    if (onModeChange) {
+      onModeChange(newMode);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,7 +221,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="text-center text-sm text-slate-600 dark:text-slate-400">
           {mode === 'signin' ? "Don't have an account?" : "Already have an account?"}{' '}
           <button
-            onClick={() => onModeChange(mode === 'signin' ? 'signup' : 'signin')}
+            onClick={() => handleModeChange(mode === 'signin' ? 'signup' : 'signin')}
             className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium"
           >
             {mode === 'signin' ? 'Sign up' : 'Sign in'}

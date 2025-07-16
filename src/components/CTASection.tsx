@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Rocket, BookOpen } from 'lucide-react';
 import {AuthModal} from './AuthModal';
@@ -10,12 +11,14 @@ interface CTASectionProps {
 
 const CTASection: React.FC<CTASectionProps> = ({ onDashboardClick }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
   const { user, loading } = useAuth();
 
   const handleGetStartedClick = () => {
     if (user && onDashboardClick) {
       onDashboardClick();
     } else {
+      setAuthMode('signup');
       setIsAuthModalOpen(true);
     }
   };
@@ -71,7 +74,8 @@ const CTASection: React.FC<CTASectionProps> = ({ onDashboardClick }) => {
         <AuthModal 
           isOpen={isAuthModalOpen} 
           onClose={() => setIsAuthModalOpen(false)} 
-          
+          mode={authMode}
+          onModeChange={setAuthMode}
         />
       )}
     </>

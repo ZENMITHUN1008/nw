@@ -12,6 +12,7 @@ export interface N8nConnection {
   workflow_count?: number;
   execution_count?: number;
   last_connected?: string;
+  created_at?: string;
 }
 
 export interface N8nWorkflow {
@@ -22,6 +23,7 @@ export interface N8nWorkflow {
   updatedAt: string;
   nodes: any[];
   connections: any;
+  tags?: string[];
 }
 
 export interface N8nExecution {
@@ -273,6 +275,130 @@ class N8nService {
     } catch (error) {
       console.error('Error executing workflow:', error);
       throw error;
+    }
+  }
+
+  // Add missing methods for compatibility
+  async deleteWorkflow(connectionId: string, workflowId: string): Promise<boolean> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Error deleting workflow:', error);
+      return false;
+    }
+  }
+
+  async activateWorkflow(connectionId: string, workflowId: string): Promise<boolean> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}/activate`, {
+        method: 'POST',
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Error activating workflow:', error);
+      return false;
+    }
+  }
+
+  async deactivateWorkflow(connectionId: string, workflowId: string): Promise<boolean> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}/deactivate`, {
+        method: 'POST',
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Error deactivating workflow:', error);
+      return false;
+    }
+  }
+
+  async getExecutions(connectionId: string): Promise<N8nExecution[]> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      const response = await fetch(`${connection.base_url}/api/v1/executions`, {
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch executions');
+      }
+
+      const data = await response.json();
+      return data.data || [];
+    } catch (error) {
+      console.error('Error fetching executions:', error);
+      return [];
+    }
+  }
+
+  async healthCheck(connectionId: string): Promise<boolean> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        return false;
+      }
+
+      const response = await fetch(`${connection.base_url}/healthz`, {
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Error checking health:', error);
+      return false;
     }
   }
 }

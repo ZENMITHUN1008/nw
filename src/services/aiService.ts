@@ -19,6 +19,13 @@ export interface WorkflowGenerationResponse {
   estimatedComplexity: 'low' | 'medium' | 'high';
 }
 
+// Add missing interface for AIPlayground compatibility
+export interface AIWorkflowRequest {
+  description: string;
+  requirements?: string[];
+  integrations?: string[];
+}
+
 class AIService {
   private apiKey: string | null = null;
 
@@ -44,6 +51,25 @@ class AIService {
       }
     } catch (error) {
       console.warn('Could not load user settings for API key');
+    }
+  }
+
+  async testConnection(): Promise<boolean> {
+    if (!this.apiKey) {
+      return false;
+    }
+
+    try {
+      const response = await fetch('https://api.openai.com/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Error testing AI connection:', error);
+      return false;
     }
   }
 
@@ -111,6 +137,83 @@ class AIService {
     } catch (error) {
       console.error('Error generating workflow:', error);
       throw error;
+    }
+  }
+
+  // Add streaming workflow generation for AIPlayground compatibility
+  async generateWorkflowStream(request: AIWorkflowRequest): Promise<AsyncGenerator<string, void, unknown>> {
+    if (!this.apiKey) {
+      throw new Error('OpenAI API key not configured. Please add your API key in settings.');
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an n8n workflow automation expert. Generate detailed n8n workflows based on user requirements.`
+          },
+          {
+            role: 'user',
+            content: `Create an n8n workflow for: ${request.description}
+            ${request.requirements ? `Requirements: ${request.requirements.join(', ')}` : ''}
+            ${request.integrations ? `Integrations needed: ${request.integrations.join(', ')}` : ''}`
+          }
+        ],
+        stream: true,
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response stream available');
+    }
+
+    return this.streamResponse(reader);
+  }
+
+  private async* streamResponse(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncGenerator<string, void, unknown> {
+    const decoder = new TextDecoder();
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') return;
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                yield content;
+              }
+            } catch (e) {
+              // Skip invalid JSON chunks
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
     }
   }
 
