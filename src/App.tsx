@@ -1,10 +1,10 @@
-import React from 'react';
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { Dashboard } from './pages/Dashboard';
 import { AIPlayground } from './pages/AIPlayground';
 import { MasterPortal } from './pages/MasterPortal';
-import AuthModal from './components/AuthModal';
+import { AuthModal } from './components/AuthModal';
 import { Toaster } from 'sonner';
 import './index.css';
 

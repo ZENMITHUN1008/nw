@@ -1,11 +1,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { n8nService, N8nConnection, N8nWorkflow, N8nExecution } from '../services/n8nService';
+import { n8nService, Connection, Workflow, N8nExecution } from '../services/n8nService';
 
 export const useN8n = () => {
-  const [connections, setConnections] = useState<N8nConnection[]>([]);
-  const [activeConnection, setActiveConnection] = useState<N8nConnection | null>(null);
-  const [workflows, setWorkflows] = useState<N8nWorkflow[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [executions, setExecutions] = useState<N8nExecution[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +17,7 @@ export const useN8n = () => {
 
   // Set active connection when connections change
   useEffect(() => {
-    const active = connections.find(conn => conn.isActive);
+    const active = connections.find(conn => conn.id);
     setActiveConnection(active || null);
     
     if (active) {
@@ -128,7 +128,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      const updatedWorkflow = await n8nService.updateWorkflow({ ...workflow, id: workflowId });
+      const updatedWorkflow = await n8nService.updateWorkflow(workflowId, workflow);
       await loadWorkflows(); // Reload workflows
       return updatedWorkflow;
     } catch (err) {

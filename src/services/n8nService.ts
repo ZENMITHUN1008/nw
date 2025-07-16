@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 
 export interface Workflow {
@@ -12,6 +13,7 @@ export interface Workflow {
   version: number;
   description: string | null;
   tags: string[] | null;
+  graph?: any;
 }
 
 export interface Connection {
@@ -31,8 +33,20 @@ export interface Credentials {
   updatedAt: string;
 }
 
+// Legacy interfaces for compatibility
+export interface N8nWorkflow extends Workflow {}
+export interface N8nConnection extends Connection {}
+export interface N8nExecution {
+  id: string;
+  workflowId: string;
+  status: 'success' | 'error' | 'running' | 'waiting';
+  startedAt: string;
+  finishedAt?: string;
+  data: any;
+}
+
 export class N8nService {
-  private baseUrl = `${supabase.supabaseUrl}/functions/v1/n8n-proxy`;
+  private baseUrl = 'https://kqemyueobhimorhdxodh.supabase.co/functions/v1/n8n-proxy';
 
   private async makeRequest(path: string, method: string = 'GET', body?: any, headers?: Record<string, string>) {
     try {
@@ -75,7 +89,21 @@ export class N8nService {
   }
 
   async getWorkflows(): Promise<Workflow[]> {
-    return this.makeRequest('/workflows')
+    const workflows = await this.makeRequest('/workflows');
+    return workflows.map((w: any) => ({
+      id: w.id,
+      name: w.name,
+      description: w.description,
+      nodes: w.nodes || [],
+      connections: w.connections || {},
+      active: w.active || false,
+      tags: w.tags || [],
+      createdAt: new Date(w.createdAt || Date.now()),
+      updatedAt: new Date(w.updatedAt || Date.now()),
+      settings: w.settings || {},
+      version: w.version || 1,
+      graph: w.graph || {}
+    }));
   }
 
   async createWorkflow(workflowData: Partial<Workflow>): Promise<Workflow> {
@@ -152,52 +180,73 @@ export class N8nService {
     return this.makeRequest('/credentials');
   }
 
+  // Additional methods for compatibility with useN8n hook
+  async testConnection(baseUrl: string, apiKey: string, instanceName: string): Promise<any> {
+    try {
+      const response = await this.makeRequest('/test', 'POST', { baseUrl, apiKey, instanceName });
+      return { success: true, data: response };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Connection test failed' };
+    }
+  }
+
+  async saveConnection(baseUrl: string, apiKey: string, instanceName: string, workflowCount?: number, version?: string): Promise<any> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { data, error } = await supabase
+        .from('n8n_connections')
+        .insert({
+          user_id: user.id,
+          base_url: baseUrl,
+          api_key: apiKey,
+          instance_name: instanceName,
+          workflow_count: workflowCount || 0,
+          version: version || 'unknown',
+          is_active: true,
+          connection_status: 'connected'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to save connection' };
+    }
+  }
+
+  async executeWorkflow(workflowId: string, data: any = {}): Promise<N8nExecution> {
+    const response = await this.makeRequest(`/workflows/${workflowId}/execute`, 'POST', data);
+    return response;
+  }
+
+  async getExecutions(workflowId?: string, limit: number = 20): Promise<N8nExecution[]> {
+    const path = workflowId ? `/workflows/${workflowId}/executions?limit=${limit}` : `/executions?limit=${limit}`;
+    return this.makeRequest(path);
+  }
+
+  async healthCheck(): Promise<any> {
+    try {
+      const response = await this.makeRequest('/health');
+      return { status: 'ok', data: response };
+    } catch (error) {
+      return { status: 'error', message: error instanceof Error ? error.message : 'Health check failed' };
+    }
+  }
+
   // Legacy methods - consider refactoring to use the above methods
-  async fetchWorkflows(baseUrl: string, apiKey: string): Promise<any> {
-    const response = await fetch(`${baseUrl}/api/v1/workflows`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-N8N-API-KEY': apiKey,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+  async fetchWorkflows(_baseUrl: string, _apiKey: string): Promise<any> {
+    return this.getWorkflows();
   }
 
-  async activateWorkflowLegacy(baseUrl: string, apiKey: string, workflowId: string): Promise<any> {
-    const response = await fetch(`${baseUrl}/api/v1/workflows/${workflowId}/activate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-N8N-API-KEY': apiKey,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+  async activateWorkflowLegacy(_baseUrl: string, _apiKey: string, workflowId: string): Promise<any> {
+    return this.activateWorkflow(workflowId);
   }
 
-  async deactivateWorkflowLegacy(baseUrl: string, apiKey: string, workflowId: string): Promise<any> {
-    const response = await fetch(`${baseUrl}/api/v1/workflows/${workflowId}/deactivate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-N8N-API-KEY': apiKey,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
+  async deactivateWorkflowLegacy(_baseUrl: string, _apiKey: string, workflowId: string): Promise<any> {
+    return this.deactivateWorkflow(workflowId);
   }
 }
 

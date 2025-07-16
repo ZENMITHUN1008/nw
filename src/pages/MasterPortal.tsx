@@ -7,7 +7,7 @@ import Logo from '../components/Logo';
 interface UserStats {
   id: string;
   email: string;
-  full_name?: string;
+  full_name?: string | null;
   created_at: string;
   workflow_count: number;
   connection_count: number;
