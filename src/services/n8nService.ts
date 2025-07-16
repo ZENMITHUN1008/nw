@@ -42,7 +42,7 @@ export interface Connection {
   execution_count: number | null;
   created_at: string;
   updated_at: string;
-  last_connected: string | Date | undefined;
+  last_connected: string | null;
   status?: string;
   workflowCount?: number;
   lastConnected?: string | Date | undefined;
@@ -141,7 +141,7 @@ export class N8nService {
         name: conn.instance_name,
         status: conn.connection_status,
         workflowCount: conn.workflow_count ?? undefined,
-        lastConnected: conn.last_connected ? conn.last_connected : undefined,
+        lastConnected: conn.last_connected || undefined,
         createdAt: new Date(conn.created_at)
       }));
     } catch (error) {

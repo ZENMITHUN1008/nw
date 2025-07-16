@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -124,7 +125,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
 
     setStep('testing');
     try {
-      const result = await testConnection(formData.baseUrl, formData.apiKey, formData.instanceName);
+      const result = await testConnection(formData.baseUrl, formData.apiKey);
       setTestResult(result);
       
       if (result.success) {
@@ -178,9 +179,17 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     setShowForm(true);
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateInput?: string | Date | null) => {
+    if (!dateInput) return 'Unknown';
+    
+    let date: Date;
+    if (typeof dateInput === 'string') {
+      date = new Date(dateInput);
+    } else {
+      date = dateInput;
+    }
+    
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

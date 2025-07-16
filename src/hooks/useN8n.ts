@@ -38,11 +38,11 @@ export const useN8n = () => {
     }
   }, []);
 
-  const testConnection = useCallback(async (baseUrl: string, apiKey: string, instanceName: string) => {
+  const testConnection = useCallback(async (baseUrl: string, apiKey: string) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await n8nService.testConnection(baseUrl, apiKey, instanceName);
+      const response = await n8nService.testConnection(baseUrl, apiKey);
       if (!response.success) {
         setError(response.error || 'Connection test failed');
         throw new Error(response.error || 'Connection test failed');
@@ -108,7 +108,7 @@ export const useN8n = () => {
     }
   }, [activeConnection]);
 
-  const createWorkflow = useCallback(async (workflow: any) => {
+  const createWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -124,7 +124,7 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const updateWorkflow = useCallback(async (workflowId: string, workflow: any) => {
+  const updateWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -140,7 +140,7 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const deleteWorkflow = useCallback(async (workflowId: string) => {
+  const deleteWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -155,7 +155,7 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const activateWorkflow = useCallback(async (workflowId: string) => {
+  const activateWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -170,7 +170,7 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const deactivateWorkflow = useCallback(async (workflowId: string) => {
+  const deactivateWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -185,7 +185,7 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const executeWorkflow = useCallback(async (workflowId: string, data: any = {}) => {
+  const executeWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -200,7 +200,7 @@ export const useN8n = () => {
     }
   }, []);
 
-  const loadExecutions = useCallback(async (workflowId?: string, limit: number = 20) => {
+  const loadExecutions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
