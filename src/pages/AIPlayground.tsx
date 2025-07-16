@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Plus, Trash2, Bot, User, History, Download, Share2, RefreshCw, Loader, Database, Power, MessageSquare, Brain, Terminal, Cpu, Globe, Lock, Unlock, Key, Check, X, AlertTriangle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { aiService, AIWorkflowRequest, MCPServerConfig } from '../services/aiService';
@@ -371,7 +372,7 @@ export const AIPlayground: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-slate-50">Settings</h3>
                 <button onClick={toggleSettings} className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors">
-                  {isSettingsOpen ? <X className="w-4 h-4 text-slate-400" : null}
+                  {isSettingsOpen ? <X className="w-4 h-4 text-slate-400" /> : <History className="w-4 h-4 text-slate-400" />}
                 </button>
               </div>
               {isSettingsOpen && (
