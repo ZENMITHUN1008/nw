@@ -44,7 +44,7 @@ export interface N8nServiceResponse<T> {
 }
 
 class N8nService {
-  async testConnection(baseUrl: string, apiKey: string, instanceName: string): Promise<N8nServiceResponse<{ version?: string; workflowCount?: number }>> {
+  async testConnection(baseUrl: string, apiKey: string, _instanceName: string): Promise<N8nServiceResponse<{ version?: string; workflowCount?: number }>> {
     try {
       const response = await fetch(`${baseUrl}/api/v1/workflows`, {
         headers: {

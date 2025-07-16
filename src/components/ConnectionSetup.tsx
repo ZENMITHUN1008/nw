@@ -151,7 +151,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
   };
 
   const handleDeleteConnection = async () => {
-    if (!activeConnection) return;
+    if (!activeConnection?.id) return;
     
     if (!confirm('Are you sure you want to delete this connection? You will need to reconnect your n8n instance.')) {
       return;
@@ -179,7 +179,8 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     setShowForm(true);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Unknown';
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -306,18 +307,18 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
                     </div>
                   </div>
                   
-                  <div className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center space-x-2 flex-shrink-0 ${getStatusColor(activeConnection.connection_status)}`}>
+                  <div className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center space-x-2 flex-shrink-0 ${getStatusColor(activeConnection.connection_status || 'disconnected')}`}>
                     {activeConnection.connection_status === 'connected' && <CheckCircle className="w-4 h-4" />}
                     {activeConnection.connection_status === 'error' && <AlertCircle className="w-4 h-4" />}
                     {activeConnection.connection_status === 'disconnected' && <Wifi className="w-4 h-4" />}
-                    <span className="capitalize">{activeConnection.connection_status}</span>
+                    <span className="capitalize">{activeConnection.connection_status || 'Unknown'}</span>
                   </div>
                 </div>
 
                 {/* Connection Details Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-slate-800/50 rounded-lg">
-                    <div className="text-2xl font-bold text-slate-50 mb-1">{activeConnection.workflow_count}</div>
+                    <div className="text-2xl font-bold text-slate-50 mb-1">{activeConnection.workflow_count || 0}</div>
                     <div className="text-sm text-slate-400 flex items-center justify-center space-x-1">
                       <Activity className="w-3 h-3" />
                       <span>Workflows</span>

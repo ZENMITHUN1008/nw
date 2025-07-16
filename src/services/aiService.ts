@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ChatMessage {
@@ -23,6 +22,7 @@ export interface AIWorkflowRequest {
   description: string;
   requirements?: string[];
   integrations?: string[];
+  message?: string;
 }
 
 class AIService {
@@ -132,7 +132,7 @@ class AIService {
     }
   }
 
-  async generateWorkflowStream(request: AIWorkflowRequest): Promise<AsyncGenerator<string, void, unknown>> {
+  async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<string, void, unknown> {
     if (!this.apiKey) {
       throw new Error('OpenAI API key not configured. Please add your API key in settings.');
     }
@@ -144,7 +144,7 @@ class AIService {
         'Authorization': `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -152,9 +152,7 @@ class AIService {
           },
           {
             role: 'user',
-            content: `Create an n8n workflow for: ${request.description}
-            ${request.requirements ? `Requirements: ${request.requirements.join(', ')}` : ''}
-            ${request.integrations ? `Integrations needed: ${request.integrations.join(', ')}` : ''}`
+            content: request.message || request.description || 'Create a workflow'
           }
         ],
         stream: true,
@@ -172,10 +170,6 @@ class AIService {
       throw new Error('No response stream available');
     }
 
-    return this.streamResponse(reader);
-  }
-
-  private async* streamResponse(reader: ReadableStreamDefaultReader<Uint8Array>): AsyncGenerator<string, void, unknown> {
     const decoder = new TextDecoder();
     
     try {
