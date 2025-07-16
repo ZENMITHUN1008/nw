@@ -1,4 +1,3 @@
-
 import { supabase } from "../integrations/supabase/client";
 import { n8nService } from "./n8nService";
 
@@ -86,7 +85,8 @@ class AIService {
           console.log('Workflow deployed successfully:', deploymentResult);
         } catch (deployError) {
           console.error('Failed to deploy workflow to n8n:', deployError);
-          deploymentResult = { error: deployError.message };
+          const errorMessage = deployError instanceof Error ? deployError.message : String(deployError);
+          deploymentResult = { error: errorMessage };
         }
       }
 
@@ -137,7 +137,8 @@ class AIService {
               yield { type: 'deployment', content: `✅ Workflow deployed successfully to n8n! ID: ${deploymentResult.id}` };
             } catch (deployError) {
               console.error('Failed to deploy workflow to n8n:', deployError);
-              yield { type: 'deployment', content: `❌ Failed to deploy to n8n: ${deployError.message}` };
+              const errorMessage = deployError instanceof Error ? deployError.message : String(deployError);
+              yield { type: 'deployment', content: `❌ Failed to deploy to n8n: ${errorMessage}` };
             }
           }
         }

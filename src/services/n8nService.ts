@@ -1,17 +1,17 @@
-
 import { supabase } from "../integrations/supabase/client";
 
 export interface N8nWorkflow {
   id?: string;
   name: string;
   description?: string;
-  graph: any;
+  graph?: any;
   createdAt?: Date;
   updatedAt?: Date;
   userId?: string;
   instanceId?: string;
   active?: boolean;
   nodes?: any[];
+  connections?: any;
   tags?: string[];
 }
 
@@ -86,6 +86,7 @@ class N8nService {
         id: workflow.id,
         name: workflow.name,
         description: workflow.description || '',
+        graph: workflow, // Include the entire workflow object as graph
         nodes: workflow.nodes || [],
         connections: workflow.connections || {},
         active: workflow.active || false,
@@ -248,7 +249,6 @@ class N8nService {
     }
   }
 
-  // Connection Management Methods
   async getConnections(): Promise<N8nConnection[]> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -349,7 +349,6 @@ class N8nService {
     }
   }
 
-  // Legacy methods for backward compatibility
   async saveWorkflow(workflow: N8nWorkflow): Promise<N8nWorkflow | null> {
     try {
       const result = await this.createWorkflow(workflow);
@@ -370,17 +369,17 @@ class N8nService {
     }
   }
 
-  async saveInstance(instance: N8nInstance): Promise<N8nInstance | null> {
+  async saveInstance(_instance: N8nInstance): Promise<N8nInstance | null> {
     // This is now handled by connections
     return null;
   }
 
-  async updateInstance(instance: N8nInstance): Promise<N8nInstance | null> {
+  async updateInstance(_instance: N8nInstance): Promise<N8nInstance | null> {
     // This is now handled by connections
     return null;
   }
 
-  async getInstance(id: string): Promise<N8nInstance | null> {
+  async getInstance(_id: string): Promise<N8nInstance | null> {
     // This is now handled by connections
     return null;
   }
@@ -390,7 +389,7 @@ class N8nService {
     return [];
   }
 
-  async deleteInstance(id: string): Promise<boolean> {
+  async deleteInstance(_id: string): Promise<boolean> {
     // This is now handled by connections
     return false;
   }
