@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '../integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Users, Activity, Globe, Zap, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -125,13 +125,13 @@ const MasterPortal = () => {
 
   const setupRealtimeSubscriptions = () => {
     // Subscribe to user analytics changes
-    const analyticsChannel = supabase
+    supabase
       .channel('analytics-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'user_analytics'
-      }, (payload) => {
+      }, (payload: any) => {
         if (payload.eventType === 'INSERT') {
           setAnalytics(prev => [payload.new as UserAnalytics, ...prev.slice(0, 99)]);
           setStats(prev => ({ ...prev, recentActivity: prev.recentActivity + 1 }));
@@ -140,13 +140,13 @@ const MasterPortal = () => {
       .subscribe();
 
     // Subscribe to system logs changes
-    const logsChannel = supabase
+    supabase
       .channel('logs-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'system_logs'
-      }, (payload) => {
+      }, (payload: any) => {
         if (payload.eventType === 'INSERT') {
           setSystemLogs(prev => [payload.new as SystemLog, ...prev.slice(0, 49)]);
         }
@@ -154,13 +154,13 @@ const MasterPortal = () => {
       .subscribe();
 
     // Subscribe to activity feed changes
-    const activityChannel = supabase
+    supabase
       .channel('activity-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'activity_feed'
-      }, (payload) => {
+      }, (payload: any) => {
         if (payload.eventType === 'INSERT') {
           setActivityFeed(prev => [payload.new as ActivityFeed, ...prev.slice(0, 49)]);
         }
@@ -168,13 +168,13 @@ const MasterPortal = () => {
       .subscribe();
 
     // Subscribe to n8n connections changes
-    const connectionsChannel = supabase
+    supabase
       .channel('connections-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'n8n_connections'
-      }, (payload) => {
+      }, (payload: any) => {
         if (payload.eventType === 'INSERT') {
           setConnections(prev => [payload.new as N8nConnection, ...prev]);
           setStats(prev => ({ 
@@ -188,13 +188,13 @@ const MasterPortal = () => {
       .subscribe();
 
     // Subscribe to profiles changes
-    const profilesChannel = supabase
+    supabase
       .channel('profiles-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'profiles'
-      }, (payload) => {
+      }, (payload: any) => {
         if (payload.eventType === 'INSERT') {
           setUsers(prev => [payload.new as Profile, ...prev]);
           setStats(prev => ({ ...prev, totalUsers: prev.totalUsers + 1 }));

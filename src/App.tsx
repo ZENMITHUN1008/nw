@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
-import AIPlayground from "./pages/AIPlayground";
+import { AIPlayground } from "./pages/AIPlayground";
 import MasterPortal from "./pages/MasterPortal";
 
 function App() {

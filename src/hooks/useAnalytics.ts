@@ -1,6 +1,6 @@
 
 import { useAuth } from './useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '../integrations/supabase/client';
 
 export const useAnalytics = () => {
   const { user } = useAuth();

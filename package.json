@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.7",
+    "@radix-ui/react-tabs": "^1.1.12",
     "@revenuecat/purchases-js": "^1.7.0",
     "@supabase/supabase-js": "^2.51.0",
     "class-variance-authority": "^0.7.1",
