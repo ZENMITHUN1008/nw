@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ConnectionSetup } from "../components/ConnectionSetup";
@@ -6,8 +7,8 @@ import { WorkflowGrid } from "../components/WorkflowGrid";
 import { WorkflowList } from "../components/WorkflowList";
 import { ProfilePage } from "../components/ProfilePage";
 import { MCPServerManager } from "../components/MCPServerManager";
-import { UsageLimitModal } from "../components/UsageLimitModal";
-import { PricingModal } from "../components/PricingModal";
+import UsageLimitModal from "../components/UsageLimitModal";
+import PricingModal from "../components/PricingModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,12 +22,12 @@ import { toast } from "sonner";
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { subscription, loading: subscriptionLoading } = useSubscription();
+  const { currentTier } = useSubscription();
   const [activeTab, setActiveTab] = useState("workflows");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
-  const [usageData, setUsageData] = useState({
+  const [usageData] = useState({
     workflowsUsed: 0,
     workflowsLimit: 5,
     executionsUsed: 0,
@@ -89,7 +90,7 @@ const Dashboard = () => {
     navigate("/master-portal");
   };
 
-  const isFreePlan = !subscription || subscription.status !== "active";
+  const isFreePlan = !currentTier || currentTier.id === "free";
   const usagePercentage = (usageData.workflowsUsed / usageData.workflowsLimit) * 100;
 
   return (
@@ -208,19 +209,23 @@ const Dashboard = () => {
                   </Button>
                 </div>
               </div>
-              {viewMode === "grid" ? <WorkflowGrid /> : <WorkflowList />}
+              {viewMode === "grid" ? (
+                <WorkflowGrid workflows={[]} onAction={() => {}} />
+              ) : (
+                <WorkflowList workflows={[]} onAction={() => {}} />
+              )}
             </TabsContent>
 
             <TabsContent value="connections">
-              <ConnectionSetup />
+              <ConnectionSetup onSkip={() => {}} onSuccess={() => {}} />
             </TabsContent>
 
             <TabsContent value="mcp">
-              <MCPServerManager />
+              <MCPServerManager onBack={() => {}} />
             </TabsContent>
 
             <TabsContent value="profile">
-              <ProfilePage />
+              <ProfilePage onBack={() => {}} />
             </TabsContent>
           </Tabs>
         </div>
@@ -242,7 +247,9 @@ const Dashboard = () => {
       <UsageLimitModal
         isOpen={showUsageModal}
         onClose={() => setShowUsageModal(false)}
-        usageData={usageData}
+        limitType="workflow"
+        currentTier={currentTier}
+        usage={{ workflows: usageData.workflowsUsed, voiceMinutes: 0 }}
         onUpgrade={() => {
           setShowUsageModal(false);
           setShowPricingModal(true);

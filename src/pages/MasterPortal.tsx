@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Activity, Database, Zap, Globe, TrendingUp } from 'lucide-react';
+import { Users, Activity, Globe, Zap, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UserAnalytics {
@@ -97,10 +97,10 @@ const MasterPortal = () => {
 
       // Calculate stats
       const totalUsers = usersRes.data?.length || 0;
-      const activeConnections = connectionsRes.data?.filter(c => c.connection_status === 'connected').length || 0;
-      const totalWorkflows = connectionsRes.data?.reduce((sum, c) => sum + (c.workflow_count || 0), 0) || 0;
-      const totalExecutions = connectionsRes.data?.reduce((sum, c) => sum + (c.execution_count || 0), 0) || 0;
-      const recentActivity = analyticsRes.data?.filter(a => {
+      const activeConnections = connectionsRes.data?.filter((c: any) => c.connection_status === 'connected').length || 0;
+      const totalWorkflows = connectionsRes.data?.reduce((sum: number, c: any) => sum + (c.workflow_count || 0), 0) || 0;
+      const totalExecutions = connectionsRes.data?.reduce((sum: number, c: any) => sum + (c.execution_count || 0), 0) || 0;
+      const recentActivity = analyticsRes.data?.filter((a: any) => {
         const activityDate = new Date(a.created_at);
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
