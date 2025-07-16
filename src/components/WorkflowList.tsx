@@ -9,13 +9,10 @@ import {
   Tag,
   Zap,
   CheckCircle,
-  Clock,
   MoreVertical,
   Activity,
   Sparkles,
-  BarChart3,
-  Settings,
-  TrendingUp
+  BarChart3
 } from 'lucide-react';
 import { N8nWorkflow } from '../services/n8nService';
 
@@ -25,7 +22,7 @@ interface WorkflowListProps {
   baseUrl?: string;
 }
 
-export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction, baseUrl }) => {
+export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction }) => {
   const getStatusColor = (workflow: N8nWorkflow) => {
     if (workflow.active) {
       return 'text-emerald-400 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 border-emerald-500/30';
@@ -110,7 +107,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction,
           </div>
           <div className="col-span-1 flex items-center justify-center">
             <div className="w-6 h-6 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
-              <Settings className="w-4 h-4 text-white" />
+              <Activity className="w-4 h-4 text-white" />
             </div>
           </div>
         </div>

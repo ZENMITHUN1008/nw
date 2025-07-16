@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { 
   VoiceService, 
   createVoiceService, 
-  getVoiceService, 
+   
   VoiceSettings,
   ElevenLabsVoice,
   isVoiceServiceConfigured 
@@ -54,7 +54,7 @@ export const useVoice = (options: UseVoiceOptions = {}): UseVoiceReturn => {
     apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY || '',
     voiceId: initialVoiceId = VoiceService.VOICES.RACHEL,
     voiceSettings: initialVoiceSettings = {},
-    autoPlay = true,
+    
     maxRecordingDuration = 30000
   } = options;
 

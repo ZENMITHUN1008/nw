@@ -274,7 +274,8 @@ class WebSubscriptionService {
     };
   }
 
-  private storeSubscriptionLocally(productId: string): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private _storeSubscriptionLocally(productId: string): void {
     try {
       const subscriptionData = {
         productId,

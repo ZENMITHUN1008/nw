@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, 
-  Mail, 
-  Calendar, 
   Settings, 
   Shield, 
   Bell, 
@@ -11,7 +9,7 @@ import {
   Save, 
   Camera, 
   Edit3,
-  Check,
+  
   X,
   Loader,
   AlertCircle,
@@ -85,7 +83,7 @@ const ProfilePage: React.FC = () => {
 
   const loadUserProfile = async () => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
@@ -95,14 +93,14 @@ const ProfilePage: React.FC = () => {
         setProfile(data);
         setEditForm(data);
       }
-    } catch (error) {
-      console.error('Error loading profile:', error);
+    } catch (err) {
+      console.error('Error loading profile:', err);
     }
   };
 
   const loadUserSettings = async () => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('user_settings')
         .select('*')
         .eq('user_id', user?.id)
@@ -111,8 +109,8 @@ const ProfilePage: React.FC = () => {
       if (data) {
         setSettings(data);
       }
-    } catch (error) {
-      console.error('Error loading settings:', error);
+    } catch (err) {
+      console.error('Error loading settings:', err);
     }
   };
 
@@ -124,7 +122,6 @@ const ProfilePage: React.FC = () => {
       const { error } = await supabase
         .from('profiles')
         .upsert({
-          id: user?.id,
           ...editForm,
           updated_at: new Date().toISOString(),
         });

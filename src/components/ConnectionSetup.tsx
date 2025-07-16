@@ -13,10 +13,8 @@ import {
   Info,
   Edit,
   Trash2,
-  Settings,
   Globe,
   Calendar,
-  Shield,
   Server,
   Activity,
   Wifi,
@@ -72,7 +70,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     saveConnection, 
     deleteConnection, 
     loading, 
-    error,
+    
     loadConnections 
   } = useN8n();
   

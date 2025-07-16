@@ -12,7 +12,7 @@ import {
   Download,
   Eye,
   EyeOff,
-  Play,
+  
   ExternalLink,
   Zap,
   FileCode,
@@ -366,7 +366,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
         remarkPlugins={[remarkGfm]}
         components={{
           // Custom code block component
-          code: CodeBlock,
+          code: CodeBlock as any,
           
           // Style other elements
           h1: ({ children }) => (

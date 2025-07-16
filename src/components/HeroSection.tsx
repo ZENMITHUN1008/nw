@@ -9,7 +9,7 @@ interface HeroSectionProps {
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ onDashboardClick }) => {
-  const [isListening, setIsListening] = useState(false);
+  
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [animateStats, setAnimateStats] = useState(false);

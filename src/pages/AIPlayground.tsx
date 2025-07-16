@@ -88,7 +88,7 @@ interface AIActivity {
 
 
 export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
-  const { workflows, activeConnection, activateWorkflow, deactivateWorkflow, createWorkflow, loadWorkflows, isLoading: isLoadingWorkflows } = useN8n();
+  const { workflows, activeConnection, createWorkflow, loadWorkflows, loading: isLoadingWorkflows } = useN8n();
   
   // Voice functionality
   const voice = useVoice({
@@ -113,13 +113,10 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
   ]);
   
   const [input, setInput] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<N8nWorkflow | null>(null);
   const [showWorkflows, setShowWorkflows] = useState(true);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loadingWorkflow, setLoadingWorkflow] = useState<string | null>(null);
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
   // WorkFlow AI Features State
@@ -129,7 +126,14 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
   
   // Voice-specific state
   const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [autoSpeak, setAutoSpeak] = useState(false);
+  // Voice and UI state variables (to be used when features are implemented)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isListening, setIsListening] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -667,11 +671,6 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
     }
   };
 
-  const handleCopyWorkflow = (workflow: any) => {
-    navigator.clipboard.writeText(JSON.stringify(workflow, null, 2));
-    setCopiedId(workflow.id || 'generated');
-    setTimeout(() => setCopiedId(null), 2000);
-  };
 
   const handleDeployWorkflow = async (workflow: any) => {
     if (!activeConnection) {

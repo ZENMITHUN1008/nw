@@ -72,7 +72,9 @@ class N8nService {
   }
 
   // Database operations
-  private async saveConnectionToDb(connection: Partial<N8nConnection>) {
+  // Database operations (unused, kept for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async _saveConnectionToDb(connection: Partial<N8nConnection>) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 

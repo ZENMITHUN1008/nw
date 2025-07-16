@@ -15,18 +15,10 @@ import {
   Settings,
   Play,
   ArrowRight,
-  Eye,
-  EyeOff,
   Download,
-  ExternalLink,
-  Edit,
-  Trash2,
-  Plus,
-  Save,
   X,
   AlertCircle,
   CheckCircle,
-  Clock,
   Activity
 } from 'lucide-react';
 
@@ -40,7 +32,6 @@ interface WorkflowVisualizationProps {
 
 export const WorkflowVisualization: React.FC<WorkflowVisualizationProps> = ({ 
   workflow, 
-  onClose, 
   onEdit,
   onDeploy,
   isEditable = true 
@@ -407,12 +398,12 @@ export const WorkflowVisualization: React.FC<WorkflowVisualizationProps> = ({
               </div>
               
               {isEditable && (
-                <button
-                  onClick={() => handleNodeEdit(node.id || `node-${index}`, node)}
-                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors duration-200 text-slate-400 hover:text-slate-200"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
+                  <button
+                    onClick={() => handleNodeEdit(node.id || `node-${index}`, node)}
+                    className="p-2 hover:bg-slate-700 rounded-lg transition-colors duration-200 text-slate-400 hover:text-slate-200"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
               )}
               
               <button

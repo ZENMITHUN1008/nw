@@ -6,18 +6,13 @@ import {
   Trash2, 
   MoreVertical, 
   ExternalLink,
-  Clock,
   Calendar,
   Tag,
   Zap,
   CheckCircle,
-  AlertCircle,
-  XCircle,
   Sparkles,
   Activity,
-  TrendingUp,
-  BarChart3,
-  Settings
+  BarChart3
 } from 'lucide-react';
 import { N8nWorkflow } from '../services/n8nService';
 
@@ -27,7 +22,7 @@ interface WorkflowGridProps {
   baseUrl?: string;
 }
 
-export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction, baseUrl }) => {
+export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction }) => {
   const getStatusColor = (workflow: N8nWorkflow) => {
     if (workflow.active) {
       return 'text-emerald-400 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 border-emerald-500/30';
@@ -59,7 +54,7 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction,
     return workflow.nodes?.length || 0;
   };
 
-  const getWorkflowCardGradient = (workflow: N8nWorkflow, index: number) => {
+  const getWorkflowCardGradient = (_workflow: N8nWorkflow, index: number) => {
     const gradients = [
       'from-indigo-500/10 to-purple-500/10',
       'from-amber-500/10 to-orange-500/10',
