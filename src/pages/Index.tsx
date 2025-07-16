@@ -2,12 +2,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { HeroSection } from '../components/HeroSection';
-import { FeaturesSection } from '../components/FeaturesSection';
-import { VoiceDemoSection } from '../components/VoiceDemoSection';
-import { TechStackSection } from '../components/TechStackSection';
-import { UseCasesSection } from '../components/UseCasesSection';
-import { CTASection } from '../components/CTASection';
+import HeroSection from '../components/HeroSection';
+import FeaturesSection from '../components/FeaturesSection';
+import VoiceDemoSection from '../components/VoiceDemoSection';
+import TechStackSection from '../components/TechStackSection';
+import UseCasesSection from '../components/UseCasesSection';
+import CTASection from '../components/CTASection';
 import Footer from '../components/Footer';
 
 const Index = () => {
