@@ -37,24 +37,47 @@ export interface N8nExecution {
   data?: any;
 }
 
+export interface N8nServiceResponse<T> {
+  success: boolean;
+  data: T;
+  error?: string;
+}
+
 class N8nService {
-  async testConnection(connection: Omit<N8nConnection, 'id'>): Promise<boolean> {
+  async testConnection(baseUrl: string, apiKey: string, instanceName: string): Promise<N8nServiceResponse<{ version?: string; workflowCount?: number }>> {
     try {
-      const response = await fetch(`${connection.base_url}/api/v1/workflows`, {
+      const response = await fetch(`${baseUrl}/api/v1/workflows`, {
         headers: {
-          'X-N8N-API-KEY': connection.api_key,
+          'X-N8N-API-KEY': apiKey,
           'Content-Type': 'application/json',
         },
       });
 
-      return response.ok;
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          success: true,
+          data: {
+            workflowCount: data.data?.length || 0
+          }
+        };
+      }
+
+      return {
+        success: false,
+        data: {},
+        error: 'Connection failed'
+      };
     } catch (error) {
-      console.error('Error testing n8n connection:', error);
-      return false;
+      return {
+        success: false,
+        data: {},
+        error: error instanceof Error ? error.message : 'Connection failed'
+      };
     }
   }
 
-  async saveConnection(connection: Omit<N8nConnection, 'id'>): Promise<N8nConnection | null> {
+  async saveConnection(baseUrl: string, apiKey: string, instanceName: string, workflowCount?: number, version?: string): Promise<N8nServiceResponse<N8nConnection>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
@@ -63,25 +86,37 @@ class N8nService {
         .from('n8n_connections')
         .insert([
           {
-            ...connection,
+            base_url: baseUrl,
+            api_key: apiKey,
+            instance_name: instanceName,
             user_id: user.id,
+            workflow_count: workflowCount || 0,
+            version: version,
+            connection_status: 'connected'
           }
         ])
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      
+      return {
+        success: true,
+        data: data
+      };
     } catch (error) {
-      console.error('Error saving n8n connection:', error);
-      return null;
+      return {
+        success: false,
+        data: {} as N8nConnection,
+        error: error instanceof Error ? error.message : 'Failed to save connection'
+      };
     }
   }
 
-  async getConnections(): Promise<N8nConnection[]> {
+  async getConnections(): Promise<N8nServiceResponse<N8nConnection[]>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user) return { success: true, data: [] };
 
       const { data, error } = await supabase
         .from('n8n_connections')
@@ -90,10 +125,17 @@ class N8nService {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      return {
+        success: true,
+        data: data || []
+      };
     } catch (error) {
-      console.error('Error fetching n8n connections:', error);
-      return [];
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Failed to fetch connections'
+      };
     }
   }
 
@@ -115,10 +157,10 @@ class N8nService {
     }
   }
 
-  async deleteConnection(id: string): Promise<boolean> {
+  async deleteConnection(id: string): Promise<void> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
+      if (!user) throw new Error('User not authenticated');
 
       const { error } = await supabase
         .from('n8n_connections')
@@ -126,25 +168,28 @@ class N8nService {
         .eq('id', id)
         .eq('user_id', user.id);
 
-      return !error;
+      if (error) throw error;
     } catch (error) {
       console.error('Error deleting n8n connection:', error);
-      return false;
+      throw error;
     }
   }
 
-  async getWorkflows(connectionId: string): Promise<N8nWorkflow[]> {
+  async getWorkflows(): Promise<N8nWorkflow[]> {
     try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        throw new Error('Connection not found');
+      const connectionsResponse = await this.getConnections();
+      if (!connectionsResponse.success || connectionsResponse.data.length === 0) {
+        return [];
       }
 
-      const response = await fetch(`${connection.base_url}/api/v1/workflows`, {
+      const activeConnection = connectionsResponse.data.find(c => c.is_active);
+      if (!activeConnection) {
+        return [];
+      }
+
+      const response = await fetch(`${activeConnection.base_url}/api/v1/workflows`, {
         headers: {
-          'X-N8N-API-KEY': connection.api_key,
+          'X-N8N-API-KEY': activeConnection.api_key,
           'Content-Type': 'application/json',
         },
       });
@@ -161,50 +206,22 @@ class N8nService {
     }
   }
 
-  async getWorkflowExecutions(connectionId: string, workflowId: string): Promise<N8nExecution[]> {
+  async createWorkflow(workflow: any): Promise<N8nWorkflow> {
     try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        throw new Error('Connection not found');
+      const connectionsResponse = await this.getConnections();
+      if (!connectionsResponse.success || connectionsResponse.data.length === 0) {
+        throw new Error('No active connection');
       }
 
-      const response = await fetch(
-        `${connection.base_url}/api/v1/executions?workflowId=${workflowId}`,
-        {
-          headers: {
-            'X-N8N-API-KEY': connection.api_key,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch executions');
+      const activeConnection = connectionsResponse.data.find(c => c.is_active);
+      if (!activeConnection) {
+        throw new Error('No active connection');
       }
 
-      const data = await response.json();
-      return data.data || [];
-    } catch (error) {
-      console.error('Error fetching executions:', error);
-      return [];
-    }
-  }
-
-  async createWorkflow(connectionId: string, workflow: any): Promise<N8nWorkflow | null> {
-    try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        throw new Error('Connection not found');
-      }
-
-      const response = await fetch(`${connection.base_url}/api/v1/workflows`, {
+      const response = await fetch(`${activeConnection.base_url}/api/v1/workflows`, {
         method: 'POST',
         headers: {
-          'X-N8N-API-KEY': connection.api_key,
+          'X-N8N-API-KEY': activeConnection.api_key,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(workflow),
@@ -217,23 +234,26 @@ class N8nService {
       return await response.json();
     } catch (error) {
       console.error('Error creating workflow:', error);
-      return null;
+      throw error;
     }
   }
 
-  async updateWorkflow(connectionId: string, workflowId: string, workflow: any): Promise<N8nWorkflow | null> {
+  async updateWorkflow(workflowId: string, workflow: any): Promise<N8nWorkflow> {
     try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        throw new Error('Connection not found');
+      const connectionsResponse = await this.getConnections();
+      if (!connectionsResponse.success || connectionsResponse.data.length === 0) {
+        throw new Error('No active connection');
       }
 
-      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}`, {
+      const activeConnection = connectionsResponse.data.find(c => c.is_active);
+      if (!activeConnection) {
+        throw new Error('No active connection');
+      }
+
+      const response = await fetch(`${activeConnection.base_url}/api/v1/workflows/${workflowId}`, {
         method: 'PUT',
         headers: {
-          'X-N8N-API-KEY': connection.api_key,
+          'X-N8N-API-KEY': activeConnection.api_key,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(workflow),
@@ -246,25 +266,116 @@ class N8nService {
       return await response.json();
     } catch (error) {
       console.error('Error updating workflow:', error);
-      return null;
+      throw error;
     }
   }
 
-  async executeWorkflow(connectionId: string, workflowId: string): Promise<any> {
+  async deleteWorkflow(workflowId: string): Promise<void> {
     try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        throw new Error('Connection not found');
+      const connectionsResponse = await this.getConnections();
+      if (!connectionsResponse.success || connectionsResponse.data.length === 0) {
+        throw new Error('No active connection');
       }
 
-      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}/execute`, {
-        method: 'POST',
+      const activeConnection = connectionsResponse.data.find(c => c.is_active);
+      if (!activeConnection) {
+        throw new Error('No active connection');
+      }
+
+      const response = await fetch(`${activeConnection.base_url}/api/v1/workflows/${workflowId}`, {
+        method: 'DELETE',
         headers: {
-          'X-N8N-API-KEY': connection.api_key,
+          'X-N8N-API-KEY': activeConnection.api_key,
           'Content-Type': 'application/json',
         },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete workflow');
+      }
+    } catch (error) {
+      console.error('Error deleting workflow:', error);
+      throw error;
+    }
+  }
+
+  async activateWorkflow(workflowId: string): Promise<void> {
+    try {
+      const connectionsResponse = await this.getConnections();
+      if (!connectionsResponse.success || connectionsResponse.data.length === 0) {
+        throw new Error('No active connection');
+      }
+
+      const activeConnection = connectionsResponse.data.find(c => c.is_active);
+      if (!activeConnection) {
+        throw new Error('No active connection');
+      }
+
+      const response = await fetch(`${activeConnection.base_url}/api/v1/workflows/${workflowId}/activate`, {
+        method: 'POST',
+        headers: {
+          'X-N8N-API-KEY': activeConnection.api_key,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to activate workflow');
+      }
+    } catch (error) {
+      console.error('Error activating workflow:', error);
+      throw error;
+    }
+  }
+
+  async deactivateWorkflow(workflowId: string): Promise<void> {
+    try {
+      const connectionsResponse = await this.getConnections();
+      if (!connectionsResponse.success || connectionsResponse.data.length === 0) {
+        throw new Error('No active connection');
+      }
+
+      const activeConnection = connectionsResponse.data.find(c => c.is_active);
+      if (!activeConnection) {
+        throw new Error('No active connection');
+      }
+
+      const response = await fetch(`${activeConnection.base_url}/api/v1/workflows/${workflowId}/deactivate`, {
+        method: 'POST',
+        headers: {
+          'X-N8N-API-KEY': activeConnection.api_key,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to deactivate workflow');
+      }
+    } catch (error) {
+      console.error('Error deactivating workflow:', error);
+      throw error;
+    }
+  }
+
+  async executeWorkflow(workflowId: string, data: any = {}): Promise<any> {
+    try {
+      const connectionsResponse = await this.getConnections();
+      if (!connectionsResponse.success || connectionsResponse.data.length === 0) {
+        throw new Error('No active connection');
+      }
+
+      const activeConnection = connectionsResponse.data.find(c => c.is_active);
+      if (!activeConnection) {
+        throw new Error('No active connection');
+      }
+
+      const response = await fetch(`${activeConnection.base_url}/api/v1/workflows/${workflowId}/execute`, {
+        method: 'POST',
+        headers: {
+          'X-N8N-API-KEY': activeConnection.api_key,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
@@ -278,91 +389,26 @@ class N8nService {
     }
   }
 
-  // Add missing methods for compatibility
-  async deleteWorkflow(connectionId: string, workflowId: string): Promise<boolean> {
+  async getExecutions(workflowId?: string, limit: number = 20): Promise<N8nExecution[]> {
     try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        throw new Error('Connection not found');
+      const connectionsResponse = await this.getConnections();
+      if (!connectionsResponse.success || connectionsResponse.data.length === 0) {
+        return [];
       }
 
-      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}`, {
-        method: 'DELETE',
-        headers: {
-          'X-N8N-API-KEY': connection.api_key,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error('Error deleting workflow:', error);
-      return false;
-    }
-  }
-
-  async activateWorkflow(connectionId: string, workflowId: string): Promise<boolean> {
-    try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        throw new Error('Connection not found');
+      const activeConnection = connectionsResponse.data.find(c => c.is_active);
+      if (!activeConnection) {
+        return [];
       }
 
-      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}/activate`, {
-        method: 'POST',
-        headers: {
-          'X-N8N-API-KEY': connection.api_key,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error('Error activating workflow:', error);
-      return false;
-    }
-  }
-
-  async deactivateWorkflow(connectionId: string, workflowId: string): Promise<boolean> {
-    try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        throw new Error('Connection not found');
+      let url = `${activeConnection.base_url}/api/v1/executions?limit=${limit}`;
+      if (workflowId) {
+        url += `&workflowId=${workflowId}`;
       }
 
-      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}/deactivate`, {
-        method: 'POST',
+      const response = await fetch(url, {
         headers: {
-          'X-N8N-API-KEY': connection.api_key,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error('Error deactivating workflow:', error);
-      return false;
-    }
-  }
-
-  async getExecutions(connectionId: string): Promise<N8nExecution[]> {
-    try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        throw new Error('Connection not found');
-      }
-
-      const response = await fetch(`${connection.base_url}/api/v1/executions`, {
-        headers: {
-          'X-N8N-API-KEY': connection.api_key,
+          'X-N8N-API-KEY': activeConnection.api_key,
           'Content-Type': 'application/json',
         },
       });
@@ -379,26 +425,29 @@ class N8nService {
     }
   }
 
-  async healthCheck(connectionId: string): Promise<boolean> {
+  async healthCheck(): Promise<{ status: string; message?: string }> {
     try {
-      const connections = await this.getConnections();
-      const connection = connections.find(c => c.id === connectionId);
-      
-      if (!connection) {
-        return false;
+      const connectionsResponse = await this.getConnections();
+      if (!connectionsResponse.success || connectionsResponse.data.length === 0) {
+        return { status: 'error', message: 'No connections available' };
       }
 
-      const response = await fetch(`${connection.base_url}/healthz`, {
+      const activeConnection = connectionsResponse.data.find(c => c.is_active);
+      if (!activeConnection) {
+        return { status: 'error', message: 'No active connection' };
+      }
+
+      const response = await fetch(`${activeConnection.base_url}/healthz`, {
         headers: {
-          'X-N8N-API-KEY': connection.api_key,
+          'X-N8N-API-KEY': activeConnection.api_key,
           'Content-Type': 'application/json',
         },
       });
 
-      return response.ok;
+      return response.ok ? { status: 'ok' } : { status: 'error', message: 'Health check failed' };
     } catch (error) {
       console.error('Error checking health:', error);
-      return false;
+      return { status: 'error', message: error instanceof Error ? error.message : 'Health check failed' };
     }
   }
 }

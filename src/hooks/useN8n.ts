@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { n8nService, N8nConnection, N8nWorkflow, N8nExecution } from '../services/n8nService';
 
@@ -31,6 +32,8 @@ export const useN8n = () => {
       const response = await n8nService.getConnections();
       if (response.success) {
         setConnections(response.data);
+      } else {
+        setError(response.error || 'Failed to load connections');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load connections');
@@ -44,6 +47,10 @@ export const useN8n = () => {
       setLoading(true);
       setError(null);
       const response = await n8nService.testConnection(baseUrl, apiKey, instanceName);
+      if (!response.success) {
+        setError(response.error || 'Connection test failed');
+        throw new Error(response.error || 'Connection test failed');
+      }
       return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Connection test failed';
@@ -61,8 +68,11 @@ export const useN8n = () => {
       const response = await n8nService.saveConnection(baseUrl, apiKey, instanceName, workflowCount, version);
       if (response.success) {
         await loadConnections(); // Reload connections
+        return response;
+      } else {
+        setError(response.error || 'Failed to save connection');
+        throw new Error(response.error || 'Failed to save connection');
       }
-      return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to save connection';
       setError(errorMessage);
