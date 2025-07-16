@@ -46,8 +46,8 @@ export interface Connection {
   status?: string;
   workflowCount?: number;
   lastConnected?: Date | string;
-  name: string; // Add name property for compatibility
-  createdAt?: Date; // Add createdAt for compatibility
+  name: string;
+  createdAt?: Date;
 }
 
 export interface Execution {
@@ -79,7 +79,7 @@ export class N8nService {
     this.apiKey = apiKey;
   }
 
-  async testConnection(baseUrl: string, apiKey: string, instanceName: string): Promise<{ success: boolean; error?: string; data?: any }> {
+  async testConnection(baseUrl: string, apiKey: string, _instanceName: string): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
       const response = await fetch(`${baseUrl}/api/v1/workflows`, {
         headers: {
@@ -154,7 +154,7 @@ export class N8nService {
         baseUrl: conn.base_url,
         name: conn.instance_name,
         status: conn.connection_status,
-        workflowCount: conn.workflow_count,
+        workflowCount: conn.workflow_count ?? undefined,
         lastConnected: conn.last_connected,
         createdAt: new Date(conn.created_at)
       }));
@@ -182,31 +182,31 @@ export class N8nService {
     return [];
   }
 
-  async createWorkflow(workflow: any): Promise<Workflow> {
+  async createWorkflow(_workflow: any): Promise<Workflow> {
     throw new Error('Not implemented');
   }
 
-  async updateWorkflow(workflowId: string, workflow: any): Promise<Workflow> {
+  async updateWorkflow(_workflowId: string, _workflow: any): Promise<Workflow> {
     throw new Error('Not implemented');
   }
 
-  async deleteWorkflow(workflowId: string): Promise<void> {
+  async deleteWorkflow(_workflowId: string): Promise<void> {
     throw new Error('Not implemented');
   }
 
-  async activateWorkflow(workflowId: string): Promise<void> {
+  async activateWorkflow(_workflowId: string): Promise<void> {
     throw new Error('Not implemented');
   }
 
-  async deactivateWorkflow(workflowId: string): Promise<void> {
+  async deactivateWorkflow(_workflowId: string): Promise<void> {
     throw new Error('Not implemented');
   }
 
-  async executeWorkflow(workflowId: string, data: any = {}): Promise<Execution> {
+  async executeWorkflow(_workflowId: string, _data: any = {}): Promise<Execution> {
     throw new Error('Not implemented');
   }
 
-  async getExecutions(workflowId?: string, limit: number = 20): Promise<Execution[]> {
+  async getExecutions(_workflowId?: string, _limit: number = 20): Promise<Execution[]> {
     return [];
   }
 

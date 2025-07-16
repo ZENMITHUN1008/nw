@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 import { N8nService } from './n8nService';
 
@@ -27,11 +28,9 @@ export interface WorkflowTemplate {
 }
 
 export class AIService {
-  private openaiApiKey: string;
   private n8nService: N8nService;
 
-  constructor(openaiApiKey: string = '') {
-    this.openaiApiKey = openaiApiKey || process.env.VITE_OPENAI_API_KEY || '';
+  constructor() {
     this.n8nService = new N8nService('', '');
   }
 
@@ -158,7 +157,7 @@ export class AIService {
     }
   }
 
-  async analyzeWorkflow(workflow: any): Promise<{
+  async analyzeWorkflow(_workflow: any): Promise<{
     suggestions: string[];
     optimizations: string[];
     issues: string[];
@@ -194,15 +193,19 @@ export class AIService {
 
   async saveWorkflowToDatabase(workflow: any, userId: string): Promise<{ success: boolean; error?: string }> {
     try {
+      // Use conversation_memory table instead of non-existent ai_generated_workflows
       const { error } = await supabase
-        .from('ai_generated_workflows')
+        .from('conversation_memory')
         .insert([{
           user_id: userId,
-          workflow_data: workflow,
-          name: workflow.name,
-          description: workflow.description,
-          tags: workflow.tags || [],
-          created_at: new Date().toISOString()
+          session_id: `workflow_${Date.now()}`,
+          messages: [workflow],
+          context: {
+            type: 'ai_generated_workflow',
+            name: workflow.name,
+            description: workflow.description,
+            tags: workflow.tags || []
+          }
         }]);
 
       if (error) {
@@ -221,9 +224,10 @@ export class AIService {
   async getUserWorkflows(userId: string): Promise<any[]> {
     try {
       const { data, error } = await supabase
-        .from('ai_generated_workflows')
+        .from('conversation_memory')
         .select('*')
         .eq('user_id', userId)
+        .eq('context->type', 'ai_generated_workflow')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -314,6 +318,36 @@ export class AIService {
         warnings: []
       };
     }
+  }
+
+  async testConnection(): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Mock test connection for now
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection test failed'
+      };
+    }
+  }
+
+  async generateWorkflowStream(request: AIWorkflowRequest): Promise<AsyncGenerator<string, void, unknown>> {
+    // Mock streaming response
+    return (async function* () {
+      const chunks = [
+        'Analyzing your request...',
+        'Generating workflow structure...',
+        'Adding nodes and connections...',
+        'Finalizing workflow...',
+        'Workflow generated successfully!'
+      ];
+      
+      for (const chunk of chunks) {
+        yield chunk;
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    })();
   }
 }
 
