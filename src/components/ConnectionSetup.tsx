@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -24,7 +23,7 @@ import {
 import { useN8n } from '../hooks/useN8n';
 
 interface ConnectionSetupProps {
-  onSkip?: () => void;
+  onSkip: () => void;
   onSuccess: () => void;
 }
 
@@ -71,6 +70,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     saveConnection, 
     deleteConnection, 
     loading, 
+    
     loadConnections 
   } = useN8n();
   
@@ -125,7 +125,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
 
     setStep('testing');
     try {
-      const result = await testConnection(formData.baseUrl, formData.apiKey);
+      const result = await testConnection(formData.baseUrl, formData.apiKey, formData.instanceName);
       setTestResult(result);
       
       if (result.success) {
@@ -171,7 +171,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
   const handleEditConnection = () => {
     if (activeConnection) {
       setFormData({
-        instanceName: activeConnection.instance_name,
+        instanceName: activeConnection.name,
         baseUrl: activeConnection.baseUrl,
         apiKey: '' // Don't pre-fill API key for security
       });
@@ -179,17 +179,9 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     setShowForm(true);
   };
 
-  const formatDate = (dateInput?: string | Date | null) => {
-    if (!dateInput) return 'Unknown';
-    
-    let date: Date;
-    if (typeof dateInput === 'string') {
-      date = new Date(dateInput);
-    } else {
-      date = dateInput;
-    }
-    
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Unknown';
+    return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -278,14 +270,12 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
             </div>
           </div>
           
-          {onSkip && (
-            <button
-              onClick={onSkip}
-              className="p-2 hover:bg-slate-700 rounded-lg transition-colors duration-200 flex-shrink-0"
-            >
-              <X className="w-5 h-5 text-slate-400" />
-            </button>
-          )}
+          <button
+            onClick={onSkip}
+            className="p-2 hover:bg-slate-700 rounded-lg transition-colors duration-200 flex-shrink-0"
+          >
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
         </div>
 
         {/* Content */}
@@ -312,7 +302,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
                       <Zap className="w-6 h-6 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-lg font-semibold text-slate-50 truncate">{activeConnection.instance_name}</h3>
+                      <h3 className="text-lg font-semibold text-slate-50 truncate">{activeConnection.name}</h3>
                       <p className="text-sm text-slate-400 truncate">{activeConnection.baseUrl}</p>
                     </div>
                   </div>
@@ -346,7 +336,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
                   <div className="text-center p-4 bg-slate-800/50 rounded-lg">
                     <div className="flex items-center justify-center text-slate-50 mb-1">
                       <Calendar className="w-4 h-4 mr-1" />
-                      <span className="text-sm font-medium">{formatDate(activeConnection.created_at).split(',')[0]}</span>
+                      <span className="text-sm font-medium">{formatDate(activeConnection.createdAt?.toISOString()).split(',')[0]}</span>
                     </div>
                     <div className="text-sm text-slate-400">Connected</div>
                   </div>
@@ -368,10 +358,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
                         <Clock className="w-4 h-4" />
                         <span>Last connected:</span>
                       </div>
-                      
-                      <span className="text-slate-300 font-medium">
-                        {formatDate(activeConnection.lastConnected)}
-                      </span>
+                      <span className="text-slate-300 font-medium">{formatDate(activeConnection.lastConnected?.toISOString())}</span>
                     </div>
                   </div>
                 )}
@@ -586,14 +573,12 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3">
-                {onSkip && (
-                  <button
-                    onClick={onSkip}
-                    className="flex-1 px-6 py-3 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white rounded-xl font-semibold transition-all duration-200"
-                  >
-                    {activeConnection ? 'Cancel' : 'Skip for Now'}
-                  </button>
-                )}
+                <button
+                  onClick={onSkip}
+                  className="flex-1 px-6 py-3 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white rounded-xl font-semibold transition-all duration-200"
+                >
+                  {activeConnection ? 'Cancel' : 'Skip for Now'}
+                </button>
                 
                 <button
                   onClick={handleTest}

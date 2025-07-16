@@ -1,227 +1,239 @@
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from "../integrations/supabase/client";
+import { n8nService } from "./n8nService";
 
-export interface MCPServerConfig {
-  id: string;
-  name: string;
-  url: string;
-  status: 'connected' | 'disconnected' | 'error';
-  tools?: string[];
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
+export interface WorkflowGenerationRequest {
+  description: string;
+  requirements?: string[];
+  integrations?: string[];
+}
+
+export interface WorkflowGenerationResponse {
+  workflow: any;
+  explanation: string;
+  estimatedComplexity: 'low' | 'medium' | 'high';
+  deploymentResult?: any;
 }
 
 export interface AIWorkflowRequest {
-  prompt: string;
-  userContext?: {
-    userId?: string;
-    email?: string;
-  };
+  description?: string;
+  requirements?: string[];
+  integrations?: string[];
+  message?: string;
+  chatHistory?: ChatMessage[];
+  selectedWorkflow?: any;
+  action?: 'generate' | 'analyze' | 'edit' | 'chat';
+  workflowContext?: any;
+  autoDeployToN8n?: boolean;
 }
 
-export interface AIWorkflowResponse {
-  success: boolean;
-  workflow?: any;
-  explanation: string;
-  error?: string;
+export interface StreamChunk {
+  type: 'text' | 'workflow' | 'error' | 'complete' | 'deployment' | 'tool_start' | 'tool_input' | 'tool_result';
+  content: string | any;
 }
 
-export class AIService {
-  private baseUrl: string;
-
-  constructor() {
-    this.baseUrl = 'https://kqemyueobhimorhdxodh.supabase.co/functions/v1';
-  }
-
-  async generateWorkflow(request: AIWorkflowRequest): Promise<AIWorkflowResponse> {
+class AIService {
+  async testConnection(): Promise<boolean> {
     try {
-      console.log('Generating workflow with request:', request);
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        return {
-          success: false,
-          explanation: '',
-          error: 'User not authenticated'
-        };
-      }
-
-      const response = await fetch(`${this.baseUrl}/workflow-generator`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(request),
+      const response = await supabase.functions.invoke('workflow-generator', {
+        body: { 
+          message: 'test connection',
+          action: 'chat'
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      return !response.error;
+    } catch (error) {
+      console.error('Error testing AI connection:', error);
+      return false;
+    }
+  }
+
+  async generateWorkflow(request: WorkflowGenerationRequest): Promise<WorkflowGenerationResponse> {
+    try {
+      const response = await supabase.functions.invoke('workflow-generator', {
+        body: {
+          message: request.description,
+          requirements: request.requirements,
+          integrations: request.integrations,
+          action: 'generate'
+        }
+      });
+
+      if (response.error) {
+        throw new Error(`AI service error: ${response.error.message}`);
       }
 
-      const data = await response.json();
-      console.log('Workflow generation response:', data);
+      const workflow = response.data?.workflow || {
+        name: "Generated Workflow",
+        nodes: [],
+        connections: {}
+      };
+
+      let deploymentResult = null;
       
+      // Auto-deploy to n8n if workflow was generated successfully
+      if (workflow && workflow.nodes && workflow.nodes.length > 0) {
+        try {
+          console.log('Auto-deploying workflow to n8n...');
+          deploymentResult = await n8nService.createWorkflow(workflow);
+          console.log('Workflow deployed successfully:', deploymentResult);
+        } catch (deployError) {
+          console.error('Failed to deploy workflow to n8n:', deployError);
+          const errorMessage = deployError instanceof Error ? deployError.message : String(deployError);
+          deploymentResult = { error: errorMessage };
+        }
+      }
+
       return {
-        success: true,
-        workflow: data.workflow,
-        explanation: data.explanation || 'Workflow generated successfully'
+        workflow,
+        explanation: response.data?.explanation || 'Workflow generated successfully',
+        estimatedComplexity: response.data?.estimatedComplexity || 'medium',
+        deploymentResult
       };
     } catch (error) {
       console.error('Error generating workflow:', error);
-      return {
-        success: false,
-        explanation: '',
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
-      };
+      throw error;
     }
   }
 
-  async generateWorkflowStream(): Promise<ReadableStream> {
-    // Return a mock stream for now
-    return new ReadableStream({
-      start(controller) {
-        const message = "Streaming workflow generation...";
-        const encoder = new TextEncoder();
-        controller.enqueue(encoder.encode(message));
-        controller.close();
+  async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<StreamChunk, void, unknown> {
+    try {
+      // Use supabase.functions.invoke for proper authentication
+      const response = await supabase.functions.invoke('workflow-generator', {
+        body: {
+          message: request.message || request.description,
+          chatHistory: request.chatHistory,
+          selectedWorkflow: request.selectedWorkflow,
+          action: request.action || 'generate',
+          workflowContext: request.workflowContext
+        }
+      });
+
+      if (response.error) {
+        throw new Error(`AI service error: ${response.error.message}`);
       }
-    });
+
+      // Since we're not getting a stream from supabase.functions.invoke,
+      // we'll yield the complete response
+      if (response.data) {
+        if (response.data.content || response.data.explanation) {
+          yield { type: 'text', content: response.data.content || response.data.explanation };
+        }
+        
+        if (response.data.workflow) {
+          yield { type: 'workflow', content: response.data.workflow };
+          
+          // Auto-deploy to n8n if enabled and workflow is valid
+          if (request.autoDeployToN8n !== false && response.data.workflow.nodes && response.data.workflow.nodes.length > 0) {
+            try {
+              yield { type: 'deployment', content: 'Deploying workflow to n8n...' };
+              const deploymentResult = await n8nService.createWorkflow(response.data.workflow);
+              yield { type: 'deployment', content: `✅ Workflow deployed successfully to n8n! ID: ${deploymentResult.id}` };
+            } catch (deployError) {
+              console.error('Failed to deploy workflow to n8n:', deployError);
+              const errorMessage = deployError instanceof Error ? deployError.message : String(deployError);
+              yield { type: 'deployment', content: `❌ Failed to deploy to n8n: ${errorMessage}` };
+            }
+          }
+        }
+      }
+
+      yield { type: 'complete', content: '' };
+      
+    } catch (error) {
+      console.error('Error in streaming workflow generation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      yield { type: 'error', content: errorMessage };
+    }
   }
 
-  async saveGeneratedWorkflow(workflow: any): Promise<{ success: boolean; error?: string }> {
+  async chat(messages: ChatMessage[]): Promise<ChatMessage> {
+    try {
+      const response = await supabase.functions.invoke('workflow-generator', {
+        body: {
+          message: messages[messages.length - 1]?.content || '',
+          chatHistory: messages.slice(0, -1),
+          action: 'chat'
+        }
+      });
+
+      if (response.error) {
+        throw new Error(`AI service error: ${response.error.message}`);
+      }
+
+      return {
+        role: 'assistant',
+        content: response.data?.content || 'I apologize, but I couldn\'t generate a response.',
+        timestamp: new Date()
+      };
+    } catch (error) {
+      console.error('Error in chat:', error);
+      throw error;
+    }
+  }
+
+  async deployWorkflowToN8n(workflow: any): Promise<any> {
+    try {
+      console.log('Deploying workflow to n8n:', workflow.name);
+      const result = await n8nService.createWorkflow(workflow);
+      console.log('Deployment successful:', result);
+      return result;
+    } catch (error) {
+      console.error('Deployment failed:', error);
+      throw error;
+    }
+  }
+
+  async saveConversation(sessionId: string, messages: ChatMessage[]): Promise<void> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
-      }
+      if (!user) return;
 
-      // Since we don't have an ai_generated_workflows table, we'll just return success
-      console.log('Saving workflow:', workflow);
-      return { success: true };
+      const { error } = await supabase
+        .from('conversation_memory')
+        .upsert({
+          user_id: user.id,
+          session_id: sessionId,
+          messages: messages as any,
+          context: {
+            active_workflows: [],
+            user_preferences: {},
+            recent_actions: []
+          }
+        });
+
+      if (error) {
+        console.error('Error saving conversation:', error);
+      }
     } catch (error) {
-      console.error('Error saving workflow:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to save workflow'
-      };
+      console.error('Error saving conversation:', error);
     }
   }
 
-  async getMCPServers(): Promise<MCPServerConfig[]> {
+  async loadConversation(sessionId: string): Promise<ChatMessage[]> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
       const { data, error } = await supabase
-        .from('mcp_servers')
-        .select('*')
-        .eq('user_id', user.id);
+        .from('conversation_memory')
+        .select('messages')
+        .eq('user_id', user.id)
+        .eq('session_id', sessionId)
+        .single();
 
-      if (error) throw error;
+      if (error || !data) return [];
 
-      return (data || []).map(server => ({
-        id: server.id,
-        name: server.name,
-        url: server.url,
-        status: server.status as 'connected' | 'disconnected' | 'error',
-        tools: server.tools as string[] || []
-      }));
+      return data.messages as unknown as ChatMessage[];
     } catch (error) {
-      console.error('Error loading MCP servers:', error);
+      console.error('Error loading conversation:', error);
       return [];
-    }
-  }
-
-  async addMCPServer(name: string, url: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return { success: false, error: 'User not authenticated' };
-      }
-
-      const { error } = await supabase
-        .from('mcp_servers')
-        .insert([{
-          user_id: user.id,
-          name,
-          url,
-          status: 'disconnected'
-        }]);
-
-      if (error) throw error;
-      return { success: true };
-    } catch (error) {
-      console.error('Error adding MCP server:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to add MCP server'
-      };
-    }
-  }
-
-  async removeMCPServer(serverId: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { error } = await supabase
-        .from('mcp_servers')
-        .delete()
-        .eq('id', serverId);
-
-      if (error) throw error;
-      return { success: true };
-    } catch (error) {
-      console.error('Error removing MCP server:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to remove MCP server'
-      };
-    }
-  }
-
-  async testMCPConnection(serverId: string): Promise<{ success: boolean; error?: string; tools?: string[] }> {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        return { success: false, error: 'User not authenticated' };
-      }
-
-      const response = await fetch(`${this.baseUrl}/test-mcp-server`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ serverId }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error testing MCP connection:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Connection test failed'
-      };
-    }
-  }
-
-  async healthCheck(): Promise<{ status: string; message?: string }> {
-    try {
-      const response = await fetch(`${this.baseUrl}/workflow-generator`, {
-        method: 'GET',
-      });
-      
-      if (response.ok) {
-        return { status: 'healthy' };
-      } else {
-        return { status: 'unhealthy', message: `HTTP ${response.status}` };
-      }
-    } catch (error) {
-      return { 
-        status: 'error', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
-      };
     }
   }
 }
