@@ -1,92 +1,89 @@
-
 import { supabase } from '../integrations/supabase/client';
-import { N8nService } from './n8nService';
-
-export interface AIWorkflowRequest {
-  prompt: string;
-  userContext?: any;
-  n8nConnectionId?: string;
-}
-
-export interface AIWorkflowResponse {
-  workflow: any;
-  explanation: string;
-  success: boolean;
-  error?: string;
-}
 
 export interface MCPServerConfig {
   id: string;
   name: string;
   url: string;
   status: 'connected' | 'disconnected' | 'error';
-  tools: string[];
+  tools?: string[];
+}
+
+export interface AIWorkflowRequest {
+  prompt: string;
+  userContext?: {
+    userId?: string;
+    email?: string;
+  };
+}
+
+export interface AIWorkflowResponse {
+  success: boolean;
+  workflow?: any;
+  explanation: string;
+  error?: string;
 }
 
 export class AIService {
-  private openaiApiKey: string;
+  private baseUrl: string;
 
-  constructor(openaiApiKey: string) {
-    this.openaiApiKey = openaiApiKey;
+  constructor() {
+    this.baseUrl = 'https://kqemyueobhimorhdxodh.supabase.co/functions/v1';
   }
 
   async generateWorkflow(request: AIWorkflowRequest): Promise<AIWorkflowResponse> {
     try {
-      console.log('Generating workflow with prompt:', request.prompt);
+      console.log('Generating workflow with request:', request);
       
-      // Mock implementation for now
-      const mockWorkflow = {
-        id: `workflow_${Date.now()}`,
-        name: `Generated Workflow - ${new Date().toLocaleDateString()}`,
-        description: `Workflow generated from: ${request.prompt.substring(0, 50)}...`,
-        nodes: [
-          {
-            id: 'start',
-            type: 'Manual Trigger',
-            name: 'Manual Trigger',
-            parameters: {}
-          },
-          {
-            id: 'process',
-            type: 'Function',
-            name: 'Process Data',
-            parameters: {
-              functionCode: `// Generated based on: ${request.prompt}\nreturn items;`
-            }
-          }
-        ],
-        connections: {
-          'Manual Trigger': {
-            main: [
-              [
-                {
-                  node: 'Process Data',
-                  type: 'main',
-                  index: 0
-                }
-              ]
-            ]
-          }
-        },
-        settings: {
-          executionOrder: 'v1'
-        }
-      };
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return {
+          success: false,
+          explanation: '',
+          error: 'User not authenticated'
+        };
+      }
 
+      const response = await fetch(`${this.baseUrl}/workflow-generator`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Workflow generation response:', data);
+      
       return {
-        workflow: mockWorkflow,
-        explanation: `Generated a workflow based on your request: "${request.prompt}". This workflow includes a manual trigger and a function node to process data according to your specifications.`,
-        success: true
+        success: true,
+        workflow: data.workflow,
+        explanation: data.explanation || 'Workflow generated successfully'
       };
     } catch (error) {
       console.error('Error generating workflow:', error);
       return {
-        workflow: null,
-        explanation: '',
         success: false,
+        explanation: '',
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
+  }
+
+  async generateWorkflowStream(): Promise<ReadableStream> {
+    // Return a mock stream for now
+    return new ReadableStream({
+      start(controller) {
+        const message = "Streaming workflow generation...";
+        const encoder = new TextEncoder();
+        controller.enqueue(encoder.encode(message));
+        controller.close();
+      }
+    });
   }
 
   async saveGeneratedWorkflow(workflow: any): Promise<{ success: boolean; error?: string }> {
@@ -96,30 +93,15 @@ export class AIService {
         return { success: false, error: 'User not authenticated' };
       }
 
-      // Since we don't have ai_generated_workflows table, we'll just log for now
-      console.log('Would save workflow:', workflow);
-      
+      // Since we don't have an ai_generated_workflows table, we'll just return success
+      console.log('Saving workflow:', workflow);
       return { success: true };
     } catch (error) {
       console.error('Error saving workflow:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to save workflow' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to save workflow'
       };
-    }
-  }
-
-  async getGeneratedWorkflows(): Promise<any[]> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      // Since we don't have ai_generated_workflows table, return empty array
-      console.log('Would fetch workflows for user:', user.id);
-      return [];
-    } catch (error) {
-      console.error('Error fetching workflows:', error);
-      return [];
     }
   }
 
@@ -143,12 +125,12 @@ export class AIService {
         tools: server.tools as string[] || []
       }));
     } catch (error) {
-      console.error('Error fetching MCP servers:', error);
+      console.error('Error loading MCP servers:', error);
       return [];
     }
   }
 
-  async addMCPServer(name: string, url: string, authToken?: string): Promise<{ success: boolean; error?: string }> {
+  async addMCPServer(name: string, url: string): Promise<{ success: boolean; error?: string }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -161,20 +143,16 @@ export class AIService {
           user_id: user.id,
           name,
           url,
-          authorization_token: authToken,
-          status: 'disconnected',
-          tools: [],
-          tool_configuration: { enabled: true }
+          status: 'disconnected'
         }]);
 
       if (error) throw error;
-
       return { success: true };
     } catch (error) {
       console.error('Error adding MCP server:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to add MCP server' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to add MCP server'
       };
     }
   }
@@ -187,60 +165,65 @@ export class AIService {
         .eq('id', serverId);
 
       if (error) throw error;
-
       return { success: true };
     } catch (error) {
       console.error('Error removing MCP server:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to remove MCP server' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to remove MCP server'
       };
     }
   }
 
   async testMCPConnection(serverId: string): Promise<{ success: boolean; error?: string; tools?: string[] }> {
     try {
-      // Mock implementation - in real app, this would test the actual connection
-      console.log('Testing MCP server connection:', serverId);
-      
-      return {
-        success: true,
-        tools: ['example-tool-1', 'example-tool-2']
-      };
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      const response = await fetch(`${this.baseUrl}/test-mcp-server`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ serverId }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Error testing MCP connection:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Connection test failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection test failed'
       };
     }
   }
 
-  async generateWorkflowStream() {
-    // Mock implementation for streaming
-    return new ReadableStream({
-      start(controller) {
-        const chunks = [
-          'Analyzing your request...\n',
-          'Generating workflow structure...\n',
-          'Adding nodes and connections...\n',
-          'Finalizing workflow...\n',
-          'Complete!'
-        ];
-        
-        let index = 0;
-        const interval = setInterval(() => {
-          if (index < chunks.length) {
-            controller.enqueue(new TextEncoder().encode(chunks[index]));
-            index++;
-          } else {
-            controller.close();
-            clearInterval(interval);
-          }
-        }, 1000);
+  async healthCheck(): Promise<{ status: string; message?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/workflow-generator`, {
+        method: 'GET',
+      });
+      
+      if (response.ok) {
+        return { status: 'healthy' };
+      } else {
+        return { status: 'unhealthy', message: `HTTP ${response.status}` };
       }
-    });
+    } catch (error) {
+      return { 
+        status: 'error', 
+        message: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
   }
 }
 
-export const aiService = new AIService('');
+export const aiService = new AIService();

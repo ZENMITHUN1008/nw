@@ -112,7 +112,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      const newWorkflow = await n8nService.createWorkflow(workflow);
+      const newWorkflow = await n8nService.createWorkflow();
       await loadWorkflows(); // Reload workflows
       return newWorkflow;
     } catch (err) {
@@ -128,7 +128,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      const updatedWorkflow = await n8nService.updateWorkflow(workflowId, workflow);
+      const updatedWorkflow = await n8nService.updateWorkflow();
       await loadWorkflows(); // Reload workflows
       return updatedWorkflow;
     } catch (err) {
@@ -144,7 +144,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      await n8nService.deleteWorkflow(workflowId);
+      await n8nService.deleteWorkflow();
       await loadWorkflows(); // Reload workflows
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete workflow';
@@ -159,7 +159,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      await n8nService.activateWorkflow(workflowId);
+      await n8nService.activateWorkflow();
       await loadWorkflows(); // Reload workflows
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to activate workflow';
@@ -174,7 +174,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      await n8nService.deactivateWorkflow(workflowId);
+      await n8nService.deactivateWorkflow();
       await loadWorkflows(); // Reload workflows
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to deactivate workflow';
@@ -189,7 +189,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      const execution = await n8nService.executeWorkflow(workflowId, data);
+      const execution = await n8nService.executeWorkflow();
       return execution;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to execute workflow';
@@ -204,7 +204,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      const executionData = await n8nService.getExecutions(workflowId, limit);
+      const executionData = await n8nService.getExecutions();
       setExecutions(executionData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load executions');

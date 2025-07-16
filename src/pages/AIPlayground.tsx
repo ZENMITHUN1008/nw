@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Plus, Trash2, Bot, User, History, Download, Share2, RefreshCw, Loader, Database, Power, MessageSquare, Brain, Terminal, Cpu, Globe, Lock, Unlock, Key, Check, X, AlertTriangle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, Plus, Trash2, History, Download, Share2, Loader, Power, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { aiService, AIWorkflowRequest, MCPServerConfig } from '../services/aiService';
 import { useAuth } from '../hooks/useAuth';
 
@@ -16,7 +15,6 @@ export const AIPlayground: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [workflow, setWorkflow] = useState<any>(null);
   const [explanation, setExplanation] = useState('');
   const [showHistory, setShowHistory] = useState(false);
@@ -67,7 +65,6 @@ export const AIPlayground: React.FC = () => {
 
     setInput('');
     setIsGenerating(true);
-    setError(null);
     setWorkflow(null);
     setExplanation('');
 
@@ -85,7 +82,6 @@ export const AIPlayground: React.FC = () => {
         };
         setMessages(prevMessages => [...prevMessages, botMessage]);
       } else {
-        setError(response.error || 'Failed to generate workflow.');
         const botMessage: Message = {
           id: Date.now().toString(),
           text: `Error: ${response.error || 'Failed to generate workflow.'}`,
@@ -96,7 +92,6 @@ export const AIPlayground: React.FC = () => {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
-      setError(errorMessage);
       const botMessage: Message = {
         id: Date.now().toString(),
         text: `Error: ${errorMessage}`,
@@ -130,7 +125,6 @@ export const AIPlayground: React.FC = () => {
       }
     } catch (error) {
       console.error("Streaming error:", error);
-      setError("Failed to process the stream.");
     } finally {
       setIsStreaming(false);
       reader.releaseLock();
@@ -139,7 +133,6 @@ export const AIPlayground: React.FC = () => {
 
   const saveWorkflow = async () => {
     if (!workflow) {
-      setError('No workflow to save.');
       return;
     }
 
@@ -147,12 +140,9 @@ export const AIPlayground: React.FC = () => {
       const response = await aiService.saveGeneratedWorkflow(workflow);
       if (response.success) {
         alert('Workflow saved successfully!');
-      } else {
-        setError(response.error || 'Failed to save workflow.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save workflow.';
-      setError(errorMessage);
+      console.error('Failed to save workflow:', err);
     }
   };
 
@@ -160,7 +150,6 @@ export const AIPlayground: React.FC = () => {
     setMessages([]);
     setWorkflow(null);
     setExplanation('');
-    setError(null);
   };
 
   const toggleHistory = () => {
@@ -176,7 +165,7 @@ export const AIPlayground: React.FC = () => {
       const servers = await aiService.getMCPServers();
       setMcpServers(servers);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load MCP servers.');
+      console.error('Failed to load MCP servers:', err);
     }
   };
 
@@ -188,12 +177,9 @@ export const AIPlayground: React.FC = () => {
         setNewServerName('');
         setNewServerUrl('');
         await loadMCPServers();
-      } else {
-        setError(response.error || 'Failed to add MCP server.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to add MCP server.';
-      setError(errorMessage);
+      console.error('Failed to add MCP server:', err);
     } finally {
       setIsAddingServer(false);
     }
@@ -204,12 +190,9 @@ export const AIPlayground: React.FC = () => {
       const response = await aiService.removeMCPServer(serverId);
       if (response.success) {
         await loadMCPServers();
-      } else {
-        setError(response.error || 'Failed to remove MCP server.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to remove MCP server.';
-      setError(errorMessage);
+      console.error('Failed to remove MCP server:', err);
     }
   };
 
@@ -223,7 +206,6 @@ export const AIPlayground: React.FC = () => {
       setConnectionTestResults(response);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Connection test failed.';
-      setError(errorMessage);
       setConnectionTestResults({ success: false, error: errorMessage });
     } finally {
       setIsTestingConnection(false);

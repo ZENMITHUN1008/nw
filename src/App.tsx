@@ -39,7 +39,7 @@ function App() {
           {user ? (
             <>
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/playground" element={<AIPlayground onBack={() => window.history.back()} />} />
+              <Route path="/playground" element={<AIPlayground />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </>
           ) : (

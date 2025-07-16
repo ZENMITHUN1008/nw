@@ -359,8 +359,9 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
                         <Clock className="w-4 h-4" />
                         <span>Last connected:</span>
                       </div>
+                      
                       <span className="text-slate-300 font-medium">
-                        {formatDate(typeof activeConnection.lastConnected === 'string' ? activeConnection.lastConnected : activeConnection.lastConnected.toString())}
+                        {formatDate(activeConnection.lastConnected)}
                       </span>
                     </div>
                   </div>

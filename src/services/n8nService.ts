@@ -42,10 +42,10 @@ export interface Connection {
   execution_count: number | null;
   created_at: string;
   updated_at: string;
-  last_connected: string | null;
+  last_connected: string | Date | undefined;
   status?: string;
   workflowCount?: number;
-  lastConnected?: string | null;
+  lastConnected?: string | Date | undefined;
   name: string;
   createdAt?: Date;
 }
@@ -65,7 +65,7 @@ export class N8nService {
     // No parameters needed since we're not storing them
   }
 
-  async testConnection(baseUrl: string, apiKey: string, instanceName: string): Promise<{ success: boolean; error?: string; data?: any }> {
+  async testConnection(baseUrl: string, apiKey: string): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
       const response = await fetch(`${baseUrl}/api/v1/workflows`, {
         headers: {
@@ -141,7 +141,7 @@ export class N8nService {
         name: conn.instance_name,
         status: conn.connection_status,
         workflowCount: conn.workflow_count ?? undefined,
-        lastConnected: conn.last_connected,
+        lastConnected: conn.last_connected ? conn.last_connected : undefined,
         createdAt: new Date(conn.created_at)
       }));
     } catch (error) {
