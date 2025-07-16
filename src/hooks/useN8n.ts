@@ -128,7 +128,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      const updatedWorkflow = await n8nService.updateWorkflow(workflowId, workflow);
+      const updatedWorkflow = await n8nService.updateWorkflow({ ...workflow, id: workflowId });
       await loadWorkflows(); // Reload workflows
       return updatedWorkflow;
     } catch (err) {

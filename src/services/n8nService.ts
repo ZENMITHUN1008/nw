@@ -52,26 +52,25 @@ export interface N8nExecution {
 }
 
 class N8nService {
+  // Mock workflow storage since n8n_workflows table doesn't exist
+  private mockWorkflows: N8nWorkflow[] = [];
+  private mockInstances: N8nInstance[] = [];
+
   async saveWorkflow(workflow: N8nWorkflow): Promise<N8nWorkflow | null> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('n8n_workflows')
-        .insert({
-          ...workflow,
-          user_id: user.id,
-        })
-        .select()
-        .single();
+      const newWorkflow: N8nWorkflow = {
+        ...workflow,
+        id: workflow.id || `workflow_${Date.now()}`,
+        userId: user.id,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
-      if (error) {
-        console.error('Error saving workflow:', error);
-        return null;
-      }
-
-      return data as N8nWorkflow;
+      this.mockWorkflows.push(newWorkflow);
+      return newWorkflow;
     } catch (error) {
       console.error('Error saving workflow:', error);
       return null;
@@ -83,22 +82,12 @@ class N8nService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('n8n_workflows')
-        .update({
-          ...workflow,
-          user_id: user.id,
-        })
-        .eq('id', workflow.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error updating workflow:', error);
-        return null;
+      const index = this.mockWorkflows.findIndex(w => w.id === workflow.id && w.userId === user.id);
+      if (index >= 0) {
+        this.mockWorkflows[index] = { ...workflow, updatedAt: new Date() };
+        return this.mockWorkflows[index];
       }
-
-      return data as N8nWorkflow;
+      return null;
     } catch (error) {
       console.error('Error updating workflow:', error);
       return null;
@@ -110,19 +99,7 @@ class N8nService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('n8n_workflows')
-        .select('*')
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching workflow:', error);
-        return null;
-      }
-
-      return data as N8nWorkflow;
+      return this.mockWorkflows.find(w => w.id === id && w.userId === user.id) || null;
     } catch (error) {
       console.error('Error fetching workflow:', error);
       return null;
@@ -134,17 +111,7 @@ class N8nService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      const { data, error } = await supabase
-        .from('n8n_workflows')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error fetching workflows:', error);
-        return [];
-      }
-
-      return data as N8nWorkflow[];
+      return this.mockWorkflows.filter(w => w.userId === user.id);
     } catch (error) {
       console.error('Error fetching workflows:', error);
       return [];
@@ -156,18 +123,12 @@ class N8nService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
-      const { error } = await supabase
-        .from('n8n_workflows')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error deleting workflow:', error);
-        return false;
+      const index = this.mockWorkflows.findIndex(w => w.id === id && w.userId === user.id);
+      if (index >= 0) {
+        this.mockWorkflows.splice(index, 1);
+        return true;
       }
-
-      return true;
+      return false;
     } catch (error) {
       console.error('Error deleting workflow:', error);
       return false;
@@ -179,21 +140,16 @@ class N8nService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('n8n_instances')
-        .insert({
-          ...instance,
-          user_id: user.id,
-        })
-        .select()
-        .single();
+      const newInstance: N8nInstance = {
+        ...instance,
+        id: instance.id || `instance_${Date.now()}`,
+        userId: user.id,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
-      if (error) {
-        console.error('Error saving instance:', error);
-        return null;
-      }
-
-      return data as N8nInstance;
+      this.mockInstances.push(newInstance);
+      return newInstance;
     } catch (error) {
       console.error('Error saving instance:', error);
       return null;
@@ -205,22 +161,12 @@ class N8nService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('n8n_instances')
-        .update({
-          ...instance,
-          user_id: user.id,
-        })
-        .eq('id', instance.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error updating instance:', error);
-        return null;
+      const index = this.mockInstances.findIndex(i => i.id === instance.id && i.userId === user.id);
+      if (index >= 0) {
+        this.mockInstances[index] = { ...instance, updatedAt: new Date() };
+        return this.mockInstances[index];
       }
-
-      return data as N8nInstance;
+      return null;
     } catch (error) {
       console.error('Error updating instance:', error);
       return null;
@@ -232,19 +178,7 @@ class N8nService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('n8n_instances')
-        .select('*')
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching instance:', error);
-        return null;
-      }
-
-      return data as N8nInstance;
+      return this.mockInstances.find(i => i.id === id && i.userId === user.id) || null;
     } catch (error) {
       console.error('Error fetching instance:', error);
       return null;
@@ -256,17 +190,7 @@ class N8nService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      const { data, error } = await supabase
-        .from('n8n_instances')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error fetching instances:', error);
-        return [];
-      }
-
-      return data as N8nInstance[];
+      return this.mockInstances.filter(i => i.userId === user.id);
     } catch (error) {
       console.error('Error fetching instances:', error);
       return [];
@@ -278,18 +202,12 @@ class N8nService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
 
-      const { error } = await supabase
-        .from('n8n_instances')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error deleting instance:', error);
-        return false;
+      const index = this.mockInstances.findIndex(i => i.id === id && i.userId === user.id);
+      if (index >= 0) {
+        this.mockInstances.splice(index, 1);
+        return true;
       }
-
-      return true;
+      return false;
     } catch (error) {
       console.error('Error deleting instance:', error);
       return false;
@@ -319,9 +237,9 @@ class N8nService {
         apiKey: conn.api_key,
         isActive: conn.is_active,
         status: conn.connection_status,
-        version: conn.version,
-        workflowCount: conn.workflow_count,
-        executionCount: conn.execution_count,
+        version: conn.version || undefined,
+        workflowCount: conn.workflow_count || undefined,
+        executionCount: conn.execution_count || undefined,
         lastConnected: conn.last_connected ? new Date(conn.last_connected) : undefined,
         createdAt: new Date(conn.created_at),
         updatedAt: new Date(conn.updated_at),
@@ -333,7 +251,7 @@ class N8nService {
     }
   }
 
-  async testConnection(baseUrl: string, apiKey: string, instanceName: string): Promise<any> {
+  async testConnection(baseUrl: string, _apiKey: string, _instanceName: string): Promise<any> {
     try {
       // Simple connection test - just verify the URL format and return mock data
       if (!baseUrl.startsWith('http')) {
@@ -435,7 +353,7 @@ class N8nService {
     }
   }
 
-  async getExecutions(workflowId?: string, limit: number = 20): Promise<N8nExecution[]> {
+  async getExecutions(_workflowId?: string, _limit: number = 20): Promise<N8nExecution[]> {
     try {
       // Mock executions - in real implementation this would call n8n API
       return [];

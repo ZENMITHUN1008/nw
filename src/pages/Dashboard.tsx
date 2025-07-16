@@ -100,11 +100,11 @@ export const Dashboard: React.FC = () => {
           break;
         case 'edit':
           // Navigate to workflow editor
-          window.open(`${activeConnection?.base_url}/workflow/${workflowId}`, '_blank');
+          window.open(`${activeConnection?.baseUrl}/workflow/${workflowId}`, '_blank');
           break;
         case 'view':
           // Navigate to workflow details
-          window.open(`${activeConnection?.base_url}/execution/${workflowId}`, '_blank');
+          window.open(`${activeConnection?.baseUrl}/execution/${workflowId}`, '_blank');
           break;
       }
     } catch (error) {
@@ -151,7 +151,7 @@ export const Dashboard: React.FC = () => {
                     ? (
                       <>
                         Manage and monitor your <span className="text-indigo-400 font-semibold">workflows</span> from{" "}
-                        <span className="text-amber-400 font-semibold">{activeConnection.instance_name}</span>
+                        <span className="text-amber-400 font-semibold">{activeConnection.name}</span>
                       </>
                     )
                     : 'Connect your n8n instance to unlock powerful workflow management'
@@ -251,7 +251,7 @@ export const Dashboard: React.FC = () => {
                       <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
                     </div>
                     <p className="text-2xl font-bold text-slate-50 group-hover:text-purple-200 transition-colors duration-300 truncate">
-                      {activeConnection.instance_name}
+                      {activeConnection.name}
                     </p>
                     <div className="flex items-center space-x-2 text-purple-400">
                       <ShieldCheck className="w-4 h-4" />
@@ -450,13 +450,13 @@ export const Dashboard: React.FC = () => {
                 <WorkflowGrid 
                   workflows={filteredWorkflows} 
                   onAction={handleWorkflowAction}
-                  baseUrl={activeConnection?.base_url}
+                  baseUrl={activeConnection?.baseUrl}
                 />
               ) : (
                 <WorkflowList 
                   workflows={filteredWorkflows} 
                   onAction={handleWorkflowAction}
-                  baseUrl={activeConnection?.base_url}
+                  baseUrl={activeConnection?.baseUrl}
                 />
               )}
             </div>

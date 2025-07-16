@@ -365,7 +365,7 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
   // WorkFlow AI Response Generation with Tool Support
   const generateAIResponse = async (userMessage: string): Promise<void> => {
     const messageId = `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setStreamingMessageId(messageId);
+    setStreamingMessageId(messageId || null);
 
     // Create initial assistant message
     const assistantMessage: ChatMessage = {
@@ -642,7 +642,7 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
 
   const handleWorkflowSelect = async (workflow: N8nWorkflow) => {
     setSelectedWorkflow(workflow);
-    setLoadingWorkflow(workflow.id);
+    setLoadingWorkflow(workflow.id || null);
     
     // Hide welcome cards if they are currently showing
     if (messages.length === 1 && messages[0].content === 'welcome_cards') {
@@ -653,7 +653,7 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
       const message: ChatMessage = {
         id: `workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         type: 'assistant',
-        content: `Perfect! I've loaded **${workflow.name}** and can now provide enhanced analysis with real-time research and testing capabilities.\n\n📊 **Workflow Overview:**\n• **Status**: ${workflow.active ? '✅ Active and running' : '⏸️ Currently inactive'}\n• **Complexity**: ${workflow.nodes?.length || 0} nodes with ${Object.keys(workflow.connections || {}).length} connections\n• **Last Updated**: ${new Date(workflow.updatedAt).toLocaleDateString()}\n\n🔍 **Enhanced Analysis Available:**\n• Real-time research on node configurations\n• Code execution for testing workflow logic\n• Performance optimization recommendations\n• Security and best practice validation\n• Integration testing with your credentials\n\n**Ask me anything about this workflow - I can research the latest approaches and test configurations in real-time!**`,
+        content: `Perfect! I've loaded **${workflow.name}** and can now provide enhanced analysis with real-time research and testing capabilities.\n\n📊 **Workflow Overview:**\n• **Status**: ${workflow.active ? '✅ Active and running' : '⏸️ Currently inactive'}\n• **Complexity**: ${workflow.nodes?.length || 0} nodes\n• **Last Updated**: ${workflow.updatedAt ? new Date(workflow.updatedAt).toLocaleDateString() : 'Unknown'}\n\n🔍 **Enhanced Analysis Available:**\n• Real-time research on node configurations\n• Code execution for testing workflow logic\n• Performance optimization recommendations\n• Security and best practice validation\n• Integration testing with your credentials\n\n**Ask me anything about this workflow - I can research the latest approaches and test configurations in real-time!**`,
         timestamp: new Date(),
         workflowData: workflow
       };
@@ -833,7 +833,7 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
               {activeConnection && (
                 <div className="hidden lg:flex items-center space-x-2 text-sm text-slate-400">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                  <span>{activeConnection.instance_name}</span>
+                  <span>{activeConnection.name}</span>
                 </div>
               )}
               
@@ -1031,7 +1031,7 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
                           </div>
                           <div className="flex items-center space-x-1">
                             <Clock className="w-3 h-3" />
-                    <span>{new Date(workflow.updatedAt).toLocaleDateString()}</span>
+                    <span>{workflow.updatedAt ? new Date(workflow.updatedAt).toLocaleDateString() : 'Unknown'}</span>
                           </div>
                         </div>
                   </div>

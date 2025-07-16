@@ -195,7 +195,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction 
               <div className="bg-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-lg px-3 py-2 group-hover:bg-slate-900/50 transition-all duration-300">
                 <div className="flex items-center space-x-2 text-sm">
                   <Calendar className="w-4 h-4 text-amber-400" />
-                  <span className="text-slate-300 font-medium">{formatDate(workflow.updatedAt)}</span>
+                  <span className="text-slate-300 font-medium">{formatDate(workflow.updatedAt?.toISOString())}</span>
                 </div>
               </div>
             </div>
@@ -204,7 +204,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction 
             <div className="col-span-1 flex items-center justify-end">
               <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                 <button
-                  onClick={() => onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
+                  onClick={() => workflow.id && onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
                   className={`group/action p-3 rounded-xl transition-all duration-300 shadow-lg ${
                     workflow.active
                       ? 'bg-gradient-to-r from-amber-600/20 to-amber-700/20 border border-amber-500/30 text-amber-400 hover:from-amber-600/30 hover:to-amber-700/30 hover:shadow-amber-500/20'
@@ -220,7 +220,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction 
                 </button>
                 
                 <button
-                  onClick={() => onAction(workflow.id, 'edit')}
+                  onClick={() => workflow.id && onAction(workflow.id, 'edit')}
                   className="group/action p-3 bg-slate-700/40 hover:bg-slate-600/40 border border-slate-600/40 hover:border-slate-500/40 text-slate-400 hover:text-slate-200 rounded-xl transition-all duration-300 backdrop-blur-sm hover:scale-110"
                   title="Edit in n8n"
                 >
@@ -228,7 +228,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction 
                 </button>
                 
                 <button
-                  onClick={() => onAction(workflow.id, 'view')}
+                  onClick={() => workflow.id && onAction(workflow.id, 'view')}
                   className="group/action p-3 bg-slate-700/40 hover:bg-slate-600/40 border border-slate-600/40 hover:border-slate-500/40 text-slate-400 hover:text-slate-200 rounded-xl transition-all duration-300 backdrop-blur-sm hover:scale-110"
                   title="View Analytics"
                 >
@@ -244,7 +244,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction 
                   <div className="absolute right-0 top-full mt-2 w-48 bg-slate-800/90 backdrop-blur-xl border border-slate-600/50 rounded-2xl shadow-2xl z-20 opacity-0 group-hover/menu:opacity-100 pointer-events-none group-hover/menu:pointer-events-auto transition-all duration-300 transform scale-95 group-hover/menu:scale-100">
                     <div className="p-2">
                       <button
-                        onClick={() => onAction(workflow.id, 'delete')}
+                        onClick={() => workflow.id && onAction(workflow.id, 'delete')}
                         className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all duration-200 group/item"
                       >
                         <Trash2 className="w-4 h-4 group-hover/item:scale-110 transition-transform duration-200" />

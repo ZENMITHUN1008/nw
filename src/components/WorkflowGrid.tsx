@@ -126,7 +126,7 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction 
               <div className="absolute right-0 top-full mt-2 w-56 bg-slate-800/90 backdrop-blur-xl border border-slate-600/50 rounded-2xl shadow-2xl z-20 opacity-0 group-hover/menu:opacity-100 pointer-events-none group-hover/menu:pointer-events-auto transition-all duration-300 transform scale-95 group-hover/menu:scale-100">
                 <div className="p-2">
                   <button
-                    onClick={() => onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
+                    onClick={() => workflow.id && onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
                     className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all duration-200 group/item"
                   >
                     {workflow.active ? (
@@ -143,7 +143,7 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction 
                   </button>
                   
                   <button
-                    onClick={() => onAction(workflow.id, 'edit')}
+                    onClick={() => workflow.id && onAction(workflow.id, 'edit')}
                     className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all duration-200 group/item"
                   >
                     <Edit className="w-5 h-5 text-indigo-400 group-hover/item:scale-110 transition-transform duration-200" />
@@ -151,7 +151,7 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction 
                   </button>
                   
                   <button
-                    onClick={() => onAction(workflow.id, 'view')}
+                    onClick={() => workflow.id && onAction(workflow.id, 'view')}
                     className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all duration-200 group/item"
                   >
                     <BarChart3 className="w-5 h-5 text-purple-400 group-hover/item:scale-110 transition-transform duration-200" />
@@ -161,7 +161,7 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction 
                   <div className="h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent my-2"></div>
                   
                   <button
-                    onClick={() => onAction(workflow.id, 'delete')}
+                    onClick={() => workflow.id && onAction(workflow.id, 'delete')}
                     className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all duration-200 group/item"
                   >
                     <Trash2 className="w-5 h-5 group-hover/item:scale-110 transition-transform duration-200" />
@@ -193,7 +193,7 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction 
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Updated</p>
-                  <p className="text-sm font-semibold text-slate-200">{formatDate(workflow.updatedAt)}</p>
+                  <p className="text-sm font-semibold text-slate-200">{formatDate(workflow.updatedAt?.toISOString())}</p>
                 </div>
               </div>
             </div>
@@ -225,7 +225,7 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction 
           {/* Premium Quick Actions */}
           <div className="relative flex items-center space-x-3 pt-6 border-t border-slate-700/30">
             <button
-              onClick={() => onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
+              onClick={() => workflow.id && onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
               className={`group/action flex-1 flex items-center justify-center space-x-3 px-6 py-4 rounded-xl font-bold text-sm transition-all duration-300 shadow-lg ${
                 workflow.active
                   ? 'bg-gradient-to-r from-amber-600/20 to-amber-700/20 border border-amber-500/30 text-amber-300 hover:from-amber-600/30 hover:to-amber-700/30 hover:shadow-amber-500/20'
@@ -246,14 +246,14 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction 
             </button>
             
             <button
-              onClick={() => onAction(workflow.id, 'edit')}
+              onClick={() => workflow.id && onAction(workflow.id, 'edit')}
               className="group/action flex items-center justify-center p-4 bg-slate-700/40 hover:bg-slate-600/40 border border-slate-600/40 hover:border-slate-500/40 text-slate-400 hover:text-slate-200 rounded-xl transition-all duration-300 backdrop-blur-sm hover:scale-105"
             >
               <Edit className="w-5 h-5 group-hover/action:scale-110 transition-transform duration-200" />
             </button>
             
             <button
-              onClick={() => onAction(workflow.id, 'view')}
+              onClick={() => workflow.id && onAction(workflow.id, 'view')}
               className="group/action flex items-center justify-center p-4 bg-slate-700/40 hover:bg-slate-600/40 border border-slate-600/40 hover:border-slate-500/40 text-slate-400 hover:text-slate-200 rounded-xl transition-all duration-300 backdrop-blur-sm hover:scale-105"
             >
               <ExternalLink className="w-5 h-5 group-hover/action:scale-110 transition-transform duration-200" />
