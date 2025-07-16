@@ -272,106 +272,67 @@ serve(async (req) => {
       throw new Error('All Gemini models are currently unavailable');
     }
     
-    console.log('Gemini API response received, starting stream');
+    console.log('Gemini API response received, processing stream');
     
-    // Create a readable stream to handle Gemini's streaming response
-    const readable = new ReadableStream({
-      start(controller) {
-        const reader = geminiResponse.body?.getReader();
-        if (!reader) {
-          console.error('No reader available from Gemini response');
-          controller.close();
-          return;
-        }
+    // Read the complete response from Gemini
+    const reader = geminiResponse.body?.getReader();
+    if (!reader) {
+      throw new Error('No reader available from Gemini response');
+    }
+    
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullContent = '';
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
         
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let fullContent = '';
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
         
-        const pump = async () => {
-          try {
-            const { done, value } = await reader.read();
-            if (done) {
-              console.log('Gemini stream finished, full content length:', fullContent.length);
-              // Try to extract workflow from full content before closing
-              const workflowData = extractWorkflowFromContent(fullContent);
-              if (workflowData) {
-                const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
-                  type: 'workflow',
-                  content: workflowData
-                })}\n\n`);
-                controller.enqueue(chunk);
-              }
-              controller.close();
-              return;
-            }
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') break;
             
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6).trim();
-                if (data === '[DONE]') {
-                  console.log('Received [DONE] from Gemini');
-                  controller.close();
-                  return;
-                }
-                
-                try {
-                  const parsed = JSON.parse(data);
-                  
-                  // Handle Gemini response format
-                  if (parsed.candidates && parsed.candidates[0]?.content?.parts) {
-                    const textContent = parsed.candidates[0].content.parts[0]?.text || '';
-                    if (textContent) {
-                      fullContent += textContent;
-                      // Send the text chunk
-                      const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
-                        type: 'text',
-                        content: textContent
-                      })}\n\n`);
-                      controller.enqueue(chunk);
-                    }
-                  } else if (parsed.error) {
-                    console.error('Gemini API error:', parsed);
-                    const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
-                      type: 'error',
-                      content: `Gemini API error: ${parsed.error?.message || 'Unknown error'}`
-                    })}\n\n`);
-                    controller.enqueue(chunk);
-                    controller.close();
-                    return;
-                  }
-                } catch (e) {
-                  console.error('Error parsing Gemini response:', e, 'Data:', data);
-                  // Don't break the stream for parsing errors
+            try {
+              const parsed = JSON.parse(data);
+              
+              // Handle Gemini response format
+              if (parsed.candidates && parsed.candidates[0]?.content?.parts) {
+                const textContent = parsed.candidates[0].content.parts[0]?.text || '';
+                if (textContent) {
+                  fullContent += textContent;
                 }
               }
+            } catch (e) {
+              console.error('Error parsing Gemini response chunk:', e);
             }
-            return pump();
-          } catch (error) {
-            console.error('Streaming error:', error);
-            const chunk = new TextEncoder().encode(`data: ${JSON.stringify({
-              type: 'error',
-              content: `Streaming error: ${error.message}`
-            })}\n\n`);
-            controller.enqueue(chunk);
-            controller.close();
           }
-        };
-        
-        pump();
+        }
       }
-    });
+    } finally {
+      reader.releaseLock();
+    }
     
-    return new Response(readable, {
+    console.log('Gemini stream finished, full content length:', fullContent.length);
+    
+    // Extract workflow from content if available
+    const workflowData = extractWorkflowFromContent(fullContent);
+    
+    // Return response in format expected by AI service
+    return new Response(JSON.stringify({
+      content: fullContent || 'I apologize, but I couldn\'t generate a response. Please try again with a more specific request.',
+      workflow: workflowData,
+      explanation: fullContent ? 'Response generated successfully' : 'No content generated',
+      estimatedComplexity: workflowData ? 'medium' : 'low'
+    }), {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
+        'Content-Type': 'application/json'
       }
     });
     
