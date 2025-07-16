@@ -1,12 +1,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { n8nService, Connection, Workflow, N8nExecution } from '../services/n8nService';
+import { n8nService, Connection, Workflow, Execution } from '../services/n8nService';
 
 export const useN8n = () => {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [executions, setExecutions] = useState<N8nExecution[]>([]);
+  const [executions, setExecutions] = useState<Execution[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

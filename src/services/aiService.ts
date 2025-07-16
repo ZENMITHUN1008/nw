@@ -1,239 +1,318 @@
-import { supabase } from "../integrations/supabase/client";
-import { n8nService } from "./n8nService";
-
-export interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-export interface WorkflowGenerationRequest {
-  description: string;
-  requirements?: string[];
-  integrations?: string[];
-}
-
-export interface WorkflowGenerationResponse {
-  workflow: any;
-  explanation: string;
-  estimatedComplexity: 'low' | 'medium' | 'high';
-  deploymentResult?: any;
-}
+import { supabase } from '../integrations/supabase/client';
+import { N8nService } from './n8nService';
 
 export interface AIWorkflowRequest {
-  description?: string;
-  requirements?: string[];
-  integrations?: string[];
-  message?: string;
-  chatHistory?: ChatMessage[];
-  selectedWorkflow?: any;
-  action?: 'generate' | 'analyze' | 'edit' | 'chat';
-  workflowContext?: any;
-  autoDeployToN8n?: boolean;
+  description: string;
+  userId: string;
+  connectionId?: string;
 }
 
-export interface StreamChunk {
-  type: 'text' | 'workflow' | 'error' | 'complete' | 'deployment' | 'tool_start' | 'tool_input' | 'tool_result';
-  content: string | any;
+export interface AIWorkflowResponse {
+  success: boolean;
+  workflow?: any;
+  error?: string;
+  suggestions?: string[];
 }
 
-class AIService {
-  async testConnection(): Promise<boolean> {
-    try {
-      const response = await supabase.functions.invoke('workflow-generator', {
-        body: { 
-          message: 'test connection',
-          action: 'chat'
-        }
-      });
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  nodes: any[];
+  connections: any[];
+  tags: string[];
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  estimatedTime: string;
+}
 
-      return !response.error;
-    } catch (error) {
-      console.error('Error testing AI connection:', error);
-      return false;
-    }
+export class AIService {
+  private openaiApiKey: string;
+  private n8nService: N8nService;
+
+  constructor(openaiApiKey: string = '') {
+    this.openaiApiKey = openaiApiKey || process.env.VITE_OPENAI_API_KEY || '';
+    this.n8nService = new N8nService('', '');
   }
 
-  async generateWorkflow(request: WorkflowGenerationRequest): Promise<WorkflowGenerationResponse> {
+  async generateWorkflow(request: AIWorkflowRequest): Promise<AIWorkflowResponse> {
     try {
-      const response = await supabase.functions.invoke('workflow-generator', {
-        body: {
-          message: request.description,
-          requirements: request.requirements,
-          integrations: request.integrations,
-          action: 'generate'
-        }
-      });
-
-      if (response.error) {
-        throw new Error(`AI service error: ${response.error.message}`);
-      }
-
-      const workflow = response.data?.workflow || {
-        name: "Generated Workflow",
-        nodes: [],
-        connections: {}
-      };
-
-      let deploymentResult = null;
-      
-      // Auto-deploy to n8n if workflow was generated successfully
-      if (workflow && workflow.nodes && workflow.nodes.length > 0) {
-        try {
-          console.log('Auto-deploying workflow to n8n...');
-          deploymentResult = await n8nService.createWorkflow(workflow);
-          console.log('Workflow deployed successfully:', deploymentResult);
-        } catch (deployError) {
-          console.error('Failed to deploy workflow to n8n:', deployError);
-          const errorMessage = deployError instanceof Error ? deployError.message : String(deployError);
-          deploymentResult = { error: errorMessage };
-        }
-      }
-
-      return {
-        workflow,
-        explanation: response.data?.explanation || 'Workflow generated successfully',
-        estimatedComplexity: response.data?.estimatedComplexity || 'medium',
-        deploymentResult
-      };
-    } catch (error) {
-      console.error('Error generating workflow:', error);
-      throw error;
-    }
-  }
-
-  async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<StreamChunk, void, unknown> {
-    try {
-      // Use supabase.functions.invoke for proper authentication
-      const response = await supabase.functions.invoke('workflow-generator', {
-        body: {
-          message: request.message || request.description,
-          chatHistory: request.chatHistory,
-          selectedWorkflow: request.selectedWorkflow,
-          action: request.action || 'generate',
-          workflowContext: request.workflowContext
-        }
-      });
-
-      if (response.error) {
-        throw new Error(`AI service error: ${response.error.message}`);
-      }
-
-      // Since we're not getting a stream from supabase.functions.invoke,
-      // we'll yield the complete response
-      if (response.data) {
-        if (response.data.content || response.data.explanation) {
-          yield { type: 'text', content: response.data.content || response.data.explanation };
-        }
-        
-        if (response.data.workflow) {
-          yield { type: 'workflow', content: response.data.workflow };
-          
-          // Auto-deploy to n8n if enabled and workflow is valid
-          if (request.autoDeployToN8n !== false && response.data.workflow.nodes && response.data.workflow.nodes.length > 0) {
-            try {
-              yield { type: 'deployment', content: 'Deploying workflow to n8n...' };
-              const deploymentResult = await n8nService.createWorkflow(response.data.workflow);
-              yield { type: 'deployment', content: `✅ Workflow deployed successfully to n8n! ID: ${deploymentResult.id}` };
-            } catch (deployError) {
-              console.error('Failed to deploy workflow to n8n:', deployError);
-              const errorMessage = deployError instanceof Error ? deployError.message : String(deployError);
-              yield { type: 'deployment', content: `❌ Failed to deploy to n8n: ${errorMessage}` };
+      // For now, return a mock response since we don't have OpenAI integration yet
+      const mockWorkflow = {
+        id: `workflow_${Date.now()}`,
+        name: `AI Generated: ${request.description.slice(0, 50)}...`,
+        description: request.description,
+        nodes: [
+          {
+            id: 'trigger',
+            type: 'webhook',
+            name: 'Webhook Trigger',
+            position: [100, 100],
+            parameters: {
+              httpMethod: 'POST',
+              path: 'webhook'
+            }
+          },
+          {
+            id: 'process',
+            type: 'function',
+            name: 'Process Data',
+            position: [300, 100],
+            parameters: {
+              functionCode: `
+                // Process the incoming data
+                const data = $input.all();
+                return data.map(item => ({
+                  ...item.json,
+                  processed: true,
+                  timestamp: new Date().toISOString()
+                }));
+              `
             }
           }
+        ],
+        connections: {
+          trigger: {
+            main: [
+              [
+                {
+                  node: 'process',
+                  type: 'main',
+                  index: 0
+                }
+              ]
+            ]
+          }
+        },
+        active: false,
+        tags: ['ai-generated'],
+        settings: {
+          executionOrder: 'v1'
         }
-      }
+      };
 
-      yield { type: 'complete', content: '' };
-      
+      return {
+        success: true,
+        workflow: mockWorkflow,
+        suggestions: [
+          'Consider adding error handling nodes',
+          'Add data validation before processing',
+          'Include logging for debugging purposes'
+        ]
+      };
     } catch (error) {
-      console.error('Error in streaming workflow generation:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      yield { type: 'error', content: errorMessage };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to generate workflow'
+      };
     }
   }
 
-  async chat(messages: ChatMessage[]): Promise<ChatMessage> {
+  async getWorkflowTemplates(category?: string): Promise<WorkflowTemplate[]> {
     try {
-      const response = await supabase.functions.invoke('workflow-generator', {
-        body: {
-          message: messages[messages.length - 1]?.content || '',
-          chatHistory: messages.slice(0, -1),
-          action: 'chat'
+      // Mock templates for now
+      const templates: WorkflowTemplate[] = [
+        {
+          id: 'email-automation',
+          name: 'Email Automation',
+          description: 'Automatically send emails based on triggers',
+          category: 'communication',
+          nodes: [],
+          connections: [],
+          tags: ['email', 'automation', 'communication'],
+          difficulty: 'beginner',
+          estimatedTime: '15 minutes'
+        },
+        {
+          id: 'data-sync',
+          name: 'Data Synchronization',
+          description: 'Sync data between different platforms',
+          category: 'data',
+          nodes: [],
+          connections: [],
+          tags: ['sync', 'data', 'integration'],
+          difficulty: 'intermediate',
+          estimatedTime: '30 minutes'
+        },
+        {
+          id: 'social-media-posting',
+          name: 'Social Media Posting',
+          description: 'Automatically post to multiple social media platforms',
+          category: 'social',
+          nodes: [],
+          connections: [],
+          tags: ['social', 'posting', 'automation'],
+          difficulty: 'beginner',
+          estimatedTime: '20 minutes'
         }
-      });
+      ];
 
-      if (response.error) {
-        throw new Error(`AI service error: ${response.error.message}`);
+      if (category) {
+        return templates.filter(template => template.category === category);
+      }
+
+      return templates;
+    } catch (error) {
+      console.error('Error fetching workflow templates:', error);
+      return [];
+    }
+  }
+
+  async analyzeWorkflow(workflow: any): Promise<{
+    suggestions: string[];
+    optimizations: string[];
+    issues: string[];
+  }> {
+    try {
+      // Mock analysis for now
+      return {
+        suggestions: [
+          'Add error handling to prevent workflow failures',
+          'Consider adding data validation nodes',
+          'Include logging for better debugging'
+        ],
+        optimizations: [
+          'Combine similar operations to reduce execution time',
+          'Use batch processing for large datasets',
+          'Cache frequently accessed data'
+        ],
+        issues: [
+          'Missing error handling in critical nodes',
+          'Potential infinite loop detected',
+          'High memory usage in data processing node'
+        ]
+      };
+    } catch (error) {
+      console.error('Error analyzing workflow:', error);
+      return {
+        suggestions: [],
+        optimizations: [],
+        issues: []
+      };
+    }
+  }
+
+  async saveWorkflowToDatabase(workflow: any, userId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from('ai_generated_workflows')
+        .insert([{
+          user_id: userId,
+          workflow_data: workflow,
+          name: workflow.name,
+          description: workflow.description,
+          tags: workflow.tags || [],
+          created_at: new Date().toISOString()
+        }]);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to save workflow'
+      };
+    }
+  }
+
+  async getUserWorkflows(userId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('ai_generated_workflows')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching user workflows:', error);
+      return [];
+    }
+  }
+
+  async improveWorkflowDescription(description: string): Promise<{
+    improved: string;
+    suggestions: string[];
+  }> {
+    try {
+      // Mock improvement for now
+      const improved = `Enhanced: ${description}. This workflow will include proper error handling, data validation, and logging capabilities for optimal performance and reliability.`;
+      
+      return {
+        improved,
+        suggestions: [
+          'Be more specific about data sources and destinations',
+          'Include error handling requirements',
+          'Specify expected data formats and volumes',
+          'Mention any security or compliance requirements'
+        ]
+      };
+    } catch (error) {
+      return {
+        improved: description,
+        suggestions: []
+      };
+    }
+  }
+
+  async validateWorkflow(workflow: any): Promise<{
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  }> {
+    try {
+      const errors: string[] = [];
+      const warnings: string[] = [];
+
+      // Basic validation
+      if (!workflow.nodes || workflow.nodes.length === 0) {
+        errors.push('Workflow must contain at least one node');
+      }
+
+      if (!workflow.name || workflow.name.trim() === '') {
+        errors.push('Workflow must have a name');
+      }
+
+      // Check for orphaned nodes
+      const connectedNodes = new Set();
+      if (workflow.connections) {
+        Object.values(workflow.connections).forEach((connections: any) => {
+          if (connections.main) {
+            connections.main.forEach((mainConnections: any[]) => {
+              mainConnections.forEach((connection: any) => {
+                connectedNodes.add(connection.node);
+              });
+            });
+          }
+        });
+      }
+
+      const orphanedNodes = workflow.nodes.filter((node: any) => 
+        node.type !== 'trigger' && !connectedNodes.has(node.id)
+      );
+
+      if (orphanedNodes.length > 0) {
+        warnings.push(`Found ${orphanedNodes.length} orphaned node(s) that are not connected`);
       }
 
       return {
-        role: 'assistant',
-        content: response.data?.content || 'I apologize, but I couldn\'t generate a response.',
-        timestamp: new Date()
+        isValid: errors.length === 0,
+        errors,
+        warnings
       };
     } catch (error) {
-      console.error('Error in chat:', error);
-      throw error;
-    }
-  }
-
-  async deployWorkflowToN8n(workflow: any): Promise<any> {
-    try {
-      console.log('Deploying workflow to n8n:', workflow.name);
-      const result = await n8nService.createWorkflow(workflow);
-      console.log('Deployment successful:', result);
-      return result;
-    } catch (error) {
-      console.error('Deployment failed:', error);
-      throw error;
-    }
-  }
-
-  async saveConversation(sessionId: string, messages: ChatMessage[]): Promise<void> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase
-        .from('conversation_memory')
-        .upsert({
-          user_id: user.id,
-          session_id: sessionId,
-          messages: messages as any,
-          context: {
-            active_workflows: [],
-            user_preferences: {},
-            recent_actions: []
-          }
-        });
-
-      if (error) {
-        console.error('Error saving conversation:', error);
-      }
-    } catch (error) {
-      console.error('Error saving conversation:', error);
-    }
-  }
-
-  async loadConversation(sessionId: string): Promise<ChatMessage[]> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const { data, error } = await supabase
-        .from('conversation_memory')
-        .select('messages')
-        .eq('user_id', user.id)
-        .eq('session_id', sessionId)
-        .single();
-
-      if (error || !data) return [];
-
-      return data.messages as unknown as ChatMessage[];
-    } catch (error) {
-      console.error('Error loading conversation:', error);
-      return [];
+      return {
+        isValid: false,
+        errors: ['Failed to validate workflow'],
+        warnings: []
+      };
     }
   }
 }

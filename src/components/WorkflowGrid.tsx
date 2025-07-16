@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { MoreHorizontal, Edit, Copy, Trash2, Eye, Plus, Search, X, Tag, XCircle } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from 'sonner';
+
+import React, { useState } from 'react';
+import { MoreVertical, Play, Pause, Edit, Copy, Trash2, Eye, Calendar } from 'lucide-react';
 
 interface Workflow {
   id: string;
@@ -17,197 +14,196 @@ interface Workflow {
 
 interface WorkflowGridProps {
   workflows: Workflow[];
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-  onDuplicate: (id: string) => void;
-  onViewDetails: (id: string) => void;
   filterTags: string[];
   onFilterChange: (tags: string[]) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onViewDetails: (id: string) => void;
   onAddTag: (workflowId: string, tag: string) => void;
   onRemoveTag: (workflowId: string, tagIndex: number) => void;
 }
 
 export const WorkflowGrid: React.FC<WorkflowGridProps> = ({
   workflows,
-  onEdit,
-  onDelete,
-  onDuplicate,
-  onViewDetails,
   filterTags,
   onFilterChange,
   searchTerm,
   onSearchChange,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  onViewDetails,
   onAddTag,
-  onRemoveTag,
+  onRemoveTag
 }) => {
-  const [tagInput, setTagInput] = useState('');
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
-
-  useEffect(() => {
-    // Extract all unique tags from workflows
-    const allTags = workflows.reduce((acc: string[], workflow) => {
-      workflow.tags.forEach(tag => {
-        if (!acc.includes(tag)) {
-          acc.push(tag);
-        }
-      });
-      return acc;
-    }, []);
-    setAvailableTags(allTags);
-  }, [workflows]);
-
-  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTagInput(e.target.value);
-  };
-
-  const handleAddTag = () => {
-    if (!selectedWorkflowId) return;
-    if (tagInput.trim() === '') return;
-
-    onAddTag(selectedWorkflowId, tagInput.trim());
-    setTagInput('');
-    setSelectedWorkflowId(null);
-  };
-
-  const handleRemoveTag = (workflowId: string, tagIndex: number) => {
-    onRemoveTag(workflowId, tagIndex);
-  };
+  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
 
   const filteredWorkflows = workflows.filter(workflow => {
-    const searchRegex = new RegExp(searchTerm, 'i');
-    const matchesSearch = searchRegex.test(workflow.name) || searchRegex.test(workflow.description);
-    const matchesTags = filterTags.every(tag => workflow.tags.includes(tag));
+    const matchesSearch = workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         workflow.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesTags = filterTags.length === 0 || 
+                       filterTags.some(tag => workflow.tags.includes(tag));
     return matchesSearch && matchesTags;
   });
 
-  const toggleFilterTag = (tag: string) => {
-    if (filterTags.includes(tag)) {
-      onFilterChange(filterTags.filter(t => t !== tag));
-    } else {
-      onFilterChange([...filterTags, tag]);
-    }
-  };
-
-  const WorkflowCard = useCallback(({ workflow }: { workflow: Workflow }) => {
+  if (workflows.length === 0) {
     return (
-      <div key={workflow.id} className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/40 rounded-2xl p-4 relative">
-        {/* Workflow Actions */}
-        <DropdownMenu>
-          <DropdownMenuTrigger className="absolute top-2 right-2 text-slate-400 hover:text-slate-300 rounded-full p-1 hover:bg-slate-700/30 transition-colors">
-            <MoreHorizontal className="w-4 h-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-slate-800 border border-slate-700 text-slate-400 shadow-lg">
-            <DropdownMenuItem onClick={() => onEdit(workflow.id)} className="hover:bg-slate-700 focus:bg-slate-700">
-              <Edit className="w-4 h-4 mr-2" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDuplicate(workflow.id)} className="hover:bg-slate-700 focus:bg-slate-700">
-              <Copy className="w-4 h-4 mr-2" /> Duplicate
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete(workflow.id)} className="hover:bg-slate-700 focus:bg-slate-700 text-red-500">
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onViewDetails(workflow.id)} className="hover:bg-slate-700 focus:bg-slate-700">
-              <Eye className="w-4 h-4 mr-2" /> View Details
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <h3 className="text-lg font-bold text-slate-50 mb-2">{workflow.name}</h3>
-        <p className="text-sm text-slate-400 mb-3 line-clamp-2">{workflow.description}</p>
-
-        {/* Workflow Tags */}
-        <div className="flex flex-wrap gap-2 mb-3">
-          {workflow.tags.map((tag, index) => (
-            <div key={index} className="bg-slate-700/50 text-slate-300 text-xs rounded-full px-2 py-1 flex items-center gap-1">
-              {tag}
-              <button onClick={() => handleRemoveTag(workflow.id, index)} className="hover:text-slate-200">
-                <XCircle className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-slate-700/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Play className="w-8 h-8 text-slate-400" />
         </div>
-
-        <div className="flex items-center justify-between text-xs text-slate-500">
-          <span>Updated: {new Date(workflow.updatedAt).toISOString()}</span>
-          <span className={`uppercase font-bold ${workflow.isActive ? 'text-emerald-400' : 'text-red-400'}`}>
-            {workflow.isActive ? 'Active' : 'Inactive'}
-          </span>
-        </div>
+        <h3 className="text-lg font-semibold text-slate-300 mb-2">No workflows yet</h3>
+        <p className="text-slate-400 mb-6">Create your first workflow to get started with automation.</p>
       </div>
     );
-  }, [onDelete, onDuplicate, onEdit, onViewDetails, handleRemoveTag]);
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Search and Filter */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <Input
-          type="text"
-          placeholder="Search workflows..."
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="bg-slate-900 border-slate-700 text-slate-300 placeholder-slate-500 rounded-xl shadow-none focus-visible:ring-indigo-500 focus-visible:ring-offset-0"
-        />
-
-        <div className="flex items-center gap-2">
-          {availableTags.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger className="px-3 py-2 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-600/40 rounded-xl transition-all duration-200 font-medium text-sm text-slate-300">
-                Filter by Tags
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-slate-800 border border-slate-700 text-slate-400 shadow-lg p-2">
-                {availableTags.map(tag => (
-                  <label key={tag} className="flex items-center space-x-2 py-1.5 px-3 rounded-md hover:bg-slate-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filterTags.includes(tag)}
-                      onChange={() => toggleFilterTag(tag)}
-                      className="h-4 w-4 rounded accent-indigo-500"
-                    />
-                    <span>{tag}</span>
-                  </label>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger className="px-3 py-2 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-600/40 rounded-xl transition-all duration-200 font-medium text-sm text-slate-300">
-              Add Tag
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-slate-800 border border-slate-700 text-slate-400 shadow-lg p-4">
-              <div className="space-y-2">
-                <Label htmlFor="tag">Tag Name:</Label>
-                <Input
-                  id="tag"
-                  type="text"
-                  placeholder="Enter tag name"
-                  value={tagInput}
-                  onChange={handleTagInputChange}
-                  className="bg-slate-900 border-slate-700 text-slate-300 placeholder-slate-500 rounded-xl shadow-none focus-visible:ring-indigo-500 focus-visible:ring-offset-0"
-                />
-                <button onClick={handleAddTag} className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors">
-                  Add Tag
-                </button>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <div className="space-y-6">
+      {/* Search and Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search workflows..."
+            value={searchTerm}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onSearchChange(e.target.value)}
+            className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-slate-50 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+          />
         </div>
       </div>
 
-      {/* Workflow Grid */}
-      {filteredWorkflows.length === 0 ? (
-        <div className="text-center text-slate-500 py-12">
-          No workflows found.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredWorkflows.map(workflow => (
-            <WorkflowCard key={workflow.id} workflow={workflow} />
-          ))}
+      {/* Workflows Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredWorkflows.map((workflow) => (
+          <div
+            key={workflow.id}
+            className="bg-slate-800/40 border border-slate-700/40 rounded-xl p-6 hover:bg-slate-800/60 transition-all duration-200"
+          >
+            {/* Workflow Header */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-slate-50 truncate">{workflow.name}</h3>
+                <p className="text-sm text-slate-400 mt-1 line-clamp-2">{workflow.description}</p>
+              </div>
+              
+              <div className="flex items-center space-x-2 ml-3">
+                <div className={`w-2 h-2 rounded-full ${
+                  workflow.isActive ? 'bg-emerald-500' : 'bg-slate-500'
+                }`} />
+                
+                <button
+                  onClick={() => setSelectedWorkflow(selectedWorkflow === workflow.id ? null : workflow.id)}
+                  className="p-1 hover:bg-slate-700/50 rounded-lg transition-colors"
+                >
+                  <MoreVertical className="w-4 h-4 text-slate-400" />
+                </button>
+              </div>
+            </div>
+
+            {/* Workflow Status */}
+            <div className="flex items-center justify-between mb-4">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                workflow.isActive 
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+              }`}>
+                {workflow.isActive ? (
+                  <>
+                    <Play className="w-3 h-3 mr-1" />
+                    Active
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-3 h-3 mr-1" />
+                    Inactive
+                  </>
+                )}
+              </span>
+
+              <div className="flex items-center text-xs text-slate-400">
+                <Calendar className="w-3 h-3 mr-1" />
+                {new Date(workflow.updatedAt).toLocaleDateString()}
+              </div>
+            </div>
+
+            {/* Tags */}
+            {workflow.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-4">
+                {workflow.tags.slice(0, 3).map((tag, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-600/50 text-xs text-slate-300"
+                  >
+                    {tag}
+                  </span>
+                ))}
+                {workflow.tags.length > 3 && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-600/50 text-xs text-slate-400">
+                    +{workflow.tags.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Quick Actions */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => onViewDetails(workflow.id)}
+                className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-slate-700/50 hover:bg-slate-600/50 rounded-lg text-sm font-medium text-slate-300 hover:text-white transition-all duration-200"
+              >
+                <Eye className="w-4 h-4" />
+                <span>View</span>
+              </button>
+              
+              <button
+                onClick={() => onEdit(workflow.id)}
+                className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 rounded-lg text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-all duration-200"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Edit</span>
+              </button>
+            </div>
+
+            {/* Dropdown Menu */}
+            {selectedWorkflow === workflow.id && (
+              <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-10">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      onDuplicate(workflow.id);
+                      setSelectedWorkflow(null);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-700"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Duplicate
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDelete(workflow.id);
+                      setSelectedWorkflow(null);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-slate-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Empty State for Filtered Results */}
+      {filteredWorkflows.length === 0 && workflows.length > 0 && (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-semibold text-slate-300 mb-2">No workflows found</h3>
+          <p className="text-slate-400">Try adjusting your search or filter criteria.</p>
         </div>
       )}
     </div>

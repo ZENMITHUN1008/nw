@@ -1,7 +1,6 @@
+
 import React, { useState } from 'react';
 import { MoreVertical, Edit, Copy, Trash2, Eye, Tag, X } from 'lucide-react';
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@nextui-org/react";
-import { toast } from 'sonner';
 
 interface Workflow {
   id: string;
@@ -34,6 +33,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
 }) => {
   const [tagInput, setTagInput] = useState('');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
   const handleAddTag = (workflowId: string, tag: string) => {
     if (tag.trim() !== '') {
@@ -95,7 +95,7 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                 <div className="flex items-center flex-wrap gap-2">
-                  {workflow.tags.map((tag, index) => (
+                  {workflow.tags.map((tag: string, index: number) => (
                     <span
                       key={index}
                       className="inline-flex items-center rounded-full bg-slate-600/70 px-2.5 py-0.5 text-xs font-medium text-slate-200"
@@ -141,35 +141,62 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
                   )}
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <Dropdown>
-                  <DropdownTrigger>
-                    <button className="text-slate-400 hover:text-slate-300 focus:outline-none transition-colors">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                  </DropdownTrigger>
-                  <DropdownMenu aria-label="Actions">
-                    <DropdownItem key="view" onClick={() => onViewDetails(workflow.id)}>
-                      <Eye className="w-4 h-4 mr-2" /> View Details
-                    </DropdownItem>
-                    <DropdownItem key="edit" onClick={() => onEdit(workflow.id)}>
-                      <Edit className="w-4 h-4 mr-2" /> Edit
-                    </DropdownItem>
-                    <DropdownItem key="duplicate" onClick={() => onDuplicate(workflow.id)}>
-                      <Copy className="w-4 h-4 mr-2" /> Duplicate
-                    </DropdownItem>
-                    <DropdownItem key="delete" className="text-red-500" onClick={() => {
-                      toast.error("Are you sure you want to delete this workflow?", {
-                        action: {
-                          label: "Delete",
-                          onClick: () => onDelete(workflow.id),
-                        },
-                      });
-                    }}>
-                      <Trash2 className="w-4 h-4 mr-2" /> Delete
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
+              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
+                <button 
+                  onClick={() => setDropdownOpen(dropdownOpen === workflow.id ? null : workflow.id)}
+                  className="text-slate-400 hover:text-slate-300 focus:outline-none transition-colors"
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+                
+                {dropdownOpen === workflow.id && (
+                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-10">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          onViewDetails(workflow.id);
+                          setDropdownOpen(null);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-700"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Details
+                      </button>
+                      <button
+                        onClick={() => {
+                          onEdit(workflow.id);
+                          setDropdownOpen(null);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-700"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          onDuplicate(workflow.id);
+                          setDropdownOpen(null);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-700"
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        Duplicate
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this workflow?')) {
+                            onDelete(workflow.id);
+                          }
+                          setDropdownOpen(null);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-slate-700"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
               </td>
             </tr>
           ))}

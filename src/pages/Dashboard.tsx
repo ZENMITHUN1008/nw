@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { ConnectionSetup } from '../components/ConnectionSetup';
@@ -85,6 +86,31 @@ export const Dashboard: React.FC = () => {
 
   const navigateToMasterPortal = () => {
     navigate('/master');
+  };
+
+  // Workflow Grid handlers
+  const handleEditWorkflow = (id: string) => {
+    console.log('Edit workflow:', id);
+  };
+
+  const handleDeleteWorkflow = (id: string) => {
+    console.log('Delete workflow:', id);
+  };
+
+  const handleDuplicateWorkflow = (id: string) => {
+    console.log('Duplicate workflow:', id);
+  };
+
+  const handleViewWorkflowDetails = (id: string) => {
+    console.log('View workflow details:', id);
+  };
+
+  const handleAddTag = (workflowId: string, tag: string) => {
+    console.log('Add tag to workflow:', workflowId, tag);
+  };
+
+  const handleRemoveTag = (workflowId: string, tagIndex: number) => {
+    console.log('Remove tag from workflow:', workflowId, tagIndex);
   };
 
   if (loading) {
@@ -275,6 +301,12 @@ export const Dashboard: React.FC = () => {
                 onFilterChange={() => {}}
                 searchTerm=""
                 onSearchChange={() => {}}
+                onEdit={handleEditWorkflow}
+                onDelete={handleDeleteWorkflow}
+                onDuplicate={handleDuplicateWorkflow}
+                onViewDetails={handleViewWorkflowDetails}
+                onAddTag={handleAddTag}
+                onRemoveTag={handleRemoveTag}
               />
             </div>
           </>
@@ -297,6 +329,7 @@ export const Dashboard: React.FC = () => {
       {showConnectionSetup && (
         <ConnectionSetup
           onSuccess={handleConnectionSuccess}
+          onSkip={() => setShowConnectionSetup(false)}
         />
       )}
     </div>
