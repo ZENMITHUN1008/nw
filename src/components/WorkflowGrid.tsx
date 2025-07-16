@@ -1,271 +1,215 @@
-import React from 'react';
-import { 
-  Play, 
-  Pause, 
-  Edit, 
-  Trash2, 
-  MoreVertical, 
-  ExternalLink,
-  Calendar,
-  Tag,
-  Zap,
-  CheckCircle,
-  Sparkles,
-  Activity,
-  BarChart3
-} from 'lucide-react';
-import { N8nWorkflow } from '../services/n8nService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { MoreHorizontal, Edit, Copy, Trash2, Eye, Plus, Search, X, Tag, XCircle } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { toast } from 'sonner';
 
-interface WorkflowGridProps {
-  workflows: N8nWorkflow[];
-  onAction: (workflowId: string, action: 'activate' | 'deactivate' | 'delete' | 'edit' | 'view') => void;
-  baseUrl?: string;
+interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  tags: string[];
 }
 
-export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction }) => {
-  const getStatusColor = (workflow: N8nWorkflow) => {
-    if (workflow.active) {
-      return 'text-emerald-400 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 border-emerald-500/30';
-    }
-    return 'text-slate-400 bg-gradient-to-r from-slate-500/20 to-slate-600/20 border-slate-500/30';
-  };
+interface WorkflowGridProps {
+  workflows: Workflow[];
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onViewDetails: (id: string) => void;
+  filterTags: string[];
+  onFilterChange: (tags: string[]) => void;
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  onAddTag: (workflowId: string, tag: string) => void;
+  onRemoveTag: (workflowId: string, tagIndex: number) => void;
+}
 
-  const getStatusIcon = (workflow: N8nWorkflow) => {
-    if (workflow.active) {
-      return <CheckCircle className="w-4 h-4" />;
-    }
-    return <Pause className="w-4 h-4" />;
-  };
+export const WorkflowGrid: React.FC<WorkflowGridProps> = ({
+  workflows,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  onViewDetails,
+  filterTags,
+  onFilterChange,
+  searchTerm,
+  onSearchChange,
+  onAddTag,
+  onRemoveTag,
+}) => {
+  const [tagInput, setTagInput] = useState('');
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
 
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
+  useEffect(() => {
+    // Extract all unique tags from workflows
+    const allTags = workflows.reduce((acc: string[], workflow) => {
+      workflow.tags.forEach(tag => {
+        if (!acc.includes(tag)) {
+          acc.push(tag);
+        }
       });
-    } catch (error) {
-      return 'Invalid date';
+      return acc;
+    }, []);
+    setAvailableTags(allTags);
+  }, [workflows]);
+
+  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagInput(e.target.value);
+  };
+
+  const handleAddTag = () => {
+    if (!selectedWorkflowId) return;
+    if (tagInput.trim() === '') return;
+
+    onAddTag(selectedWorkflowId, tagInput.trim());
+    setTagInput('');
+    setSelectedWorkflowId(null);
+  };
+
+  const handleRemoveTag = (workflowId: string, tagIndex: number) => {
+    onRemoveTag(workflowId, tagIndex);
+  };
+
+  const filteredWorkflows = workflows.filter(workflow => {
+    const searchRegex = new RegExp(searchTerm, 'i');
+    const matchesSearch = searchRegex.test(workflow.name) || searchRegex.test(workflow.description);
+    const matchesTags = filterTags.every(tag => workflow.tags.includes(tag));
+    return matchesSearch && matchesTags;
+  });
+
+  const toggleFilterTag = (tag: string) => {
+    if (filterTags.includes(tag)) {
+      onFilterChange(filterTags.filter(t => t !== tag));
+    } else {
+      onFilterChange([...filterTags, tag]);
     }
   };
 
-  const getNodeCount = (workflow: N8nWorkflow) => {
-    return workflow.nodes?.length || 0;
-  };
+  const WorkflowCard = useCallback(({ workflow }: { workflow: Workflow }) => {
+    return (
+      <div key={workflow.id} className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/40 rounded-2xl p-4 relative">
+        {/* Workflow Actions */}
+        <DropdownMenu>
+          <DropdownMenuTrigger className="absolute top-2 right-2 text-slate-400 hover:text-slate-300 rounded-full p-1 hover:bg-slate-700/30 transition-colors">
+            <MoreHorizontal className="w-4 h-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-slate-800 border border-slate-700 text-slate-400 shadow-lg">
+            <DropdownMenuItem onClick={() => onEdit(workflow.id)} className="hover:bg-slate-700 focus:bg-slate-700">
+              <Edit className="w-4 h-4 mr-2" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDuplicate(workflow.id)} className="hover:bg-slate-700 focus:bg-slate-700">
+              <Copy className="w-4 h-4 mr-2" /> Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDelete(workflow.id)} className="hover:bg-slate-700 focus:bg-slate-700 text-red-500">
+              <Trash2 className="w-4 h-4 mr-2" /> Delete
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onViewDetails(workflow.id)} className="hover:bg-slate-700 focus:bg-slate-700">
+              <Eye className="w-4 h-4 mr-2" /> View Details
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-  const getWorkflowCardGradient = (_workflow: N8nWorkflow, index: number) => {
-    const gradients = [
-      'from-indigo-500/10 to-purple-500/10',
-      'from-amber-500/10 to-orange-500/10',
-      'from-emerald-500/10 to-teal-500/10',
-      'from-pink-500/10 to-rose-500/10',
-      'from-cyan-500/10 to-blue-500/10',
-      'from-violet-500/10 to-purple-500/10'
-    ];
-    return gradients[index % gradients.length];
-  };
+        <h3 className="text-lg font-bold text-slate-50 mb-2">{workflow.name}</h3>
+        <p className="text-sm text-slate-400 mb-3 line-clamp-2">{workflow.description}</p>
 
-  const getBorderGradient = (workflow: N8nWorkflow, index: number) => {
-    if (workflow.active) {
-      return 'border-emerald-500/30 hover:border-emerald-400/50';
-    }
-    const borders = [
-      'border-indigo-500/20 hover:border-indigo-400/40',
-      'border-amber-500/20 hover:border-amber-400/40',
-      'border-purple-500/20 hover:border-purple-400/40',
-      'border-pink-500/20 hover:border-pink-400/40',
-      'border-cyan-500/20 hover:border-cyan-400/40'
-    ];
-    return borders[index % borders.length];
-  };
+        {/* Workflow Tags */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {workflow.tags.map((tag, index) => (
+            <div key={index} className="bg-slate-700/50 text-slate-300 text-xs rounded-full px-2 py-1 flex items-center gap-1">
+              {tag}
+              <button onClick={() => handleRemoveTag(workflow.id, index)} className="hover:text-slate-200">
+                <XCircle className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-slate-500">
+          <span>Updated: {new Date(workflow.updatedAt).toISOString()}</span>
+          <span className={`uppercase font-bold ${workflow.isActive ? 'text-emerald-400' : 'text-red-400'}`}>
+            {workflow.isActive ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+      </div>
+    );
+  }, [onDelete, onDuplicate, onEdit, onViewDetails, handleRemoveTag]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-      {workflows.map((workflow, index) => (
-        <div
-          key={workflow.id}
-          className={`group relative bg-slate-800/40 backdrop-blur-xl border ${getBorderGradient(workflow, index)} rounded-2xl p-8 transition-all duration-500 hover:bg-slate-800/60 hover:scale-105 hover:shadow-2xl hover:-translate-y-1 cursor-pointer`}
-        >
-          {/* Premium Background Gradient */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${getWorkflowCardGradient(workflow, index)} rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
-          
-          {/* Premium Header */}
-          <div className="relative flex items-start justify-between mb-6">
-            <div className="flex-1 min-w-0 space-y-3">
-              <div className="flex items-center space-x-3">
-                <div className={`w-12 h-12 bg-gradient-to-br ${workflow.active ? 'from-emerald-500 to-emerald-600' : 'from-slate-600 to-slate-700'} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  {workflow.active ? (
-                    <Activity className="w-6 h-6 text-white" />
-                  ) : (
-                    <Pause className="w-6 h-6 text-white" />
-                  )}
-                </div>
-                
-            <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-bold text-slate-50 truncate group-hover:text-indigo-200 transition-colors duration-300">
-                {workflow.name || 'Untitled Workflow'}
-              </h3>
-              
-                  {/* Premium Status Badge */}
-                  <div className={`inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-semibold border backdrop-blur-sm ${getStatusColor(workflow)} mt-2`}>
-                {getStatusIcon(workflow)}
-                    <span>{workflow.active ? 'Live & Running' : 'Ready to Deploy'}</span>
-                    {workflow.active && <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>}
-                  </div>
-                </div>
-              </div>
-            </div>
+    <div className="space-y-4">
+      {/* Search and Filter */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <Input
+          type="text"
+          placeholder="Search workflows..."
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="bg-slate-900 border-slate-700 text-slate-300 placeholder-slate-500 rounded-xl shadow-none focus-visible:ring-indigo-500 focus-visible:ring-offset-0"
+        />
 
-            {/* Premium Actions Dropdown */}
-            <div className="relative group/menu">
-              <button className="p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl transition-all duration-200 opacity-0 group-hover:opacity-100 border border-slate-700/50 hover:border-slate-600 backdrop-blur-sm">
-                <MoreVertical className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors duration-200" />
-              </button>
-              
-              <div className="absolute right-0 top-full mt-2 w-56 bg-slate-800/90 backdrop-blur-xl border border-slate-600/50 rounded-2xl shadow-2xl z-20 opacity-0 group-hover/menu:opacity-100 pointer-events-none group-hover/menu:pointer-events-auto transition-all duration-300 transform scale-95 group-hover/menu:scale-100">
-                <div className="p-2">
-                  <button
-                    onClick={() => workflow.id && onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
-                    className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all duration-200 group/item"
-                  >
-                    {workflow.active ? (
-                      <>
-                        <Pause className="w-5 h-5 text-amber-400 group-hover/item:scale-110 transition-transform duration-200" />
-                        <span>Deactivate Workflow</span>
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-5 h-5 text-emerald-400 group-hover/item:scale-110 transition-transform duration-200" />
-                        <span>Activate Workflow</span>
-                      </>
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={() => workflow.id && onAction(workflow.id, 'edit')}
-                    className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all duration-200 group/item"
-                  >
-                    <Edit className="w-5 h-5 text-indigo-400 group-hover/item:scale-110 transition-transform duration-200" />
-                    <span>Edit in n8n Studio</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => workflow.id && onAction(workflow.id, 'view')}
-                    className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-xl transition-all duration-200 group/item"
-                  >
-                    <BarChart3 className="w-5 h-5 text-purple-400 group-hover/item:scale-110 transition-transform duration-200" />
-                    <span>View Analytics</span>
-                  </button>
-                  
-                  <div className="h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent my-2"></div>
-                  
-                  <button
-                    onClick={() => workflow.id && onAction(workflow.id, 'delete')}
-                    className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all duration-200 group/item"
-                  >
-                    <Trash2 className="w-5 h-5 group-hover/item:scale-110 transition-transform duration-200" />
-                    <span>Delete Workflow</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Premium Workflow Metrics */}
-          <div className="relative grid grid-cols-2 gap-6 mb-6">
-            <div className="bg-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl p-4 group-hover:bg-slate-900/50 transition-all duration-300">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-lg flex items-center justify-center border border-indigo-500/20">
-                  <Zap className="w-5 h-5 text-indigo-400" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Nodes</p>
-                  <p className="text-lg font-bold text-slate-200">{getNodeCount(workflow)}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl p-4 group-hover:bg-slate-900/50 transition-all duration-300">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-500/20 to-amber-600/20 rounded-lg flex items-center justify-center border border-amber-500/20">
-                  <Calendar className="w-5 h-5 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Updated</p>
-                  <p className="text-sm font-semibold text-slate-200">{formatDate(workflow.updatedAt?.toISOString())}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Premium Tags Section */}
-          {workflow.tags && workflow.tags.length > 0 && (
-            <div className="relative mb-6">
-              <div className="flex flex-wrap gap-2">
-                {workflow.tags.slice(0, 3).map((tag, tagIndex) => (
-                <span
-                    key={tagIndex}
-                    className="inline-flex items-center space-x-2 px-3 py-1.5 bg-slate-700/40 backdrop-blur-sm border border-slate-600/30 text-slate-300 text-xs font-medium rounded-lg hover:bg-slate-600/40 transition-all duration-200"
-                >
-                  <Tag className="w-3 h-3" />
-                  <span>{typeof tag === 'string' ? tag : 'Tag'}</span>
-                </span>
-              ))}
-              {workflow.tags.length > 3 && (
-                  <span className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-medium rounded-lg backdrop-blur-sm">
-                    <Sparkles className="w-3 h-3 mr-1" />
-                  +{workflow.tags.length - 3} more
-                </span>
-              )}
-              </div>
-            </div>
+        <div className="flex items-center gap-2">
+          {availableTags.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="px-3 py-2 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-600/40 rounded-xl transition-all duration-200 font-medium text-sm text-slate-300">
+                Filter by Tags
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-slate-800 border border-slate-700 text-slate-400 shadow-lg p-2">
+                {availableTags.map(tag => (
+                  <label key={tag} className="flex items-center space-x-2 py-1.5 px-3 rounded-md hover:bg-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filterTags.includes(tag)}
+                      onChange={() => toggleFilterTag(tag)}
+                      className="h-4 w-4 rounded accent-indigo-500"
+                    />
+                    <span>{tag}</span>
+                  </label>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
-          {/* Premium Quick Actions */}
-          <div className="relative flex items-center space-x-3 pt-6 border-t border-slate-700/30">
-            <button
-              onClick={() => workflow.id && onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
-              className={`group/action flex-1 flex items-center justify-center space-x-3 px-6 py-4 rounded-xl font-bold text-sm transition-all duration-300 shadow-lg ${
-                workflow.active
-                  ? 'bg-gradient-to-r from-amber-600/20 to-amber-700/20 border border-amber-500/30 text-amber-300 hover:from-amber-600/30 hover:to-amber-700/30 hover:shadow-amber-500/20'
-                  : 'bg-gradient-to-r from-emerald-600/20 to-emerald-700/20 border border-emerald-500/30 text-emerald-300 hover:from-emerald-600/30 hover:to-emerald-700/30 hover:shadow-emerald-500/20'
-              } backdrop-blur-sm hover:scale-105 hover:shadow-xl`}
-            >
-              {workflow.active ? (
-                <>
-                  <Pause className="w-5 h-5 group-hover/action:scale-110 transition-transform duration-200" />
-                  <span>Pause</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-5 h-5 group-hover/action:scale-110 transition-transform duration-200" />
-                  <span>Deploy</span>
-                </>
-              )}
-            </button>
-            
-            <button
-              onClick={() => workflow.id && onAction(workflow.id, 'edit')}
-              className="group/action flex items-center justify-center p-4 bg-slate-700/40 hover:bg-slate-600/40 border border-slate-600/40 hover:border-slate-500/40 text-slate-400 hover:text-slate-200 rounded-xl transition-all duration-300 backdrop-blur-sm hover:scale-105"
-            >
-              <Edit className="w-5 h-5 group-hover/action:scale-110 transition-transform duration-200" />
-            </button>
-            
-            <button
-              onClick={() => workflow.id && onAction(workflow.id, 'view')}
-              className="group/action flex items-center justify-center p-4 bg-slate-700/40 hover:bg-slate-600/40 border border-slate-600/40 hover:border-slate-500/40 text-slate-400 hover:text-slate-200 rounded-xl transition-all duration-300 backdrop-blur-sm hover:scale-105"
-            >
-              <ExternalLink className="w-5 h-5 group-hover/action:scale-110 transition-transform duration-200" />
-            </button>
-          </div>
-
-          {/* Premium Performance Indicator */}
-          {workflow.active && (
-            <div className="absolute top-4 right-4 w-3 h-3 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="px-3 py-2 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-600/40 rounded-xl transition-all duration-200 font-medium text-sm text-slate-300">
+              Add Tag
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-slate-800 border border-slate-700 text-slate-400 shadow-lg p-4">
+              <div className="space-y-2">
+                <Label htmlFor="tag">Tag Name:</Label>
+                <Input
+                  id="tag"
+                  type="text"
+                  placeholder="Enter tag name"
+                  value={tagInput}
+                  onChange={handleTagInputChange}
+                  className="bg-slate-900 border-slate-700 text-slate-300 placeholder-slate-500 rounded-xl shadow-none focus-visible:ring-indigo-500 focus-visible:ring-offset-0"
+                />
+                <button onClick={handleAddTag} className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors">
+                  Add Tag
+                </button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      ))}
+      </div>
+
+      {/* Workflow Grid */}
+      {filteredWorkflows.length === 0 ? (
+        <div className="text-center text-slate-500 py-12">
+          No workflows found.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredWorkflows.map(workflow => (
+            <WorkflowCard key={workflow.id} workflow={workflow} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

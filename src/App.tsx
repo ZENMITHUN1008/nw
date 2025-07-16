@@ -43,7 +43,7 @@ function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </>
           ) : (
-            <Route path="*" element={<AuthModal />} />
+            <Route path="*" element={<AuthModal isOpen={true} onClose={() => {}} />} />
           )}
         </Routes>
       </div>

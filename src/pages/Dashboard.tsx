@@ -1,11 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { ConnectionSetup } from '../components/ConnectionSetup';
 import { WorkflowGrid } from '../components/WorkflowGrid';
 import { Plus, Settings, User, Zap, Activity, BarChart3, TrendingUp, Shield } from 'lucide-react';
 import { supabase } from '../integrations/supabase/client';
-import { n8nService } from '../services/n8nService';
 import Logo from '../components/Logo';
 import { useNavigate } from 'react-router-dom';
 
@@ -39,7 +37,7 @@ export const Dashboard: React.FC = () => {
       const { data, error } = await supabase
         .from('n8n_connections')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user?.id || '')
         .eq('is_active', true)
         .limit(1);
 
@@ -273,16 +271,10 @@ export const Dashboard: React.FC = () => {
               </div>
               <WorkflowGrid 
                 workflows={[]} 
-                onEdit={() => {}}
-                onDelete={() => {}}
-                onDuplicate={() => {}}
-                onViewDetails={() => {}}
                 filterTags={[]}
                 onFilterChange={() => {}}
                 searchTerm=""
                 onSearchChange={() => {}}
-                onAddTag={(workflowId: string, tag: string) => {}}
-                onRemoveTag={(workflowId: string, tagIndex: number) => {}}
               />
             </div>
           </>
@@ -304,7 +296,6 @@ export const Dashboard: React.FC = () => {
       {/* Connection Setup Modal */}
       {showConnectionSetup && (
         <ConnectionSetup
-          onClose={() => setShowConnectionSetup(false)}
           onSuccess={handleConnectionSuccess}
         />
       )}
