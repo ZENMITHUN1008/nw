@@ -146,7 +146,7 @@ serve(async (req) => {
           body: JSON.stringify({
             contents: messages,
             generationConfig: {
-              temperature: 0.7,
+              temperature: 0.3,
               maxOutputTokens: 8000,
               topP: 0.8,
               topK: 40
@@ -249,13 +249,21 @@ serve(async (req) => {
 });
 
 function buildSystemPrompt(action, selectedWorkflow, workflowContext) {
-  const basePrompt = `You are WorkFlow AI, an expert n8n automation engineer. Your job is to create production-ready workflows efficiently.
+  const basePrompt = `You are WorkFlow AI, an expert n8n automation engineer. Your primary goal is to ALWAYS create working workflows.
 
 # CORE BEHAVIOR:
+- ALWAYS say "Yes, I can create that workflow" and build it
 - Generate working n8n JSON immediately when requested
-- Be conversational and helpful for general questions
-- Use clear, direct responses
-- Focus on practical, working solutions
+- Use reasonable assumptions for missing details
+- Be solution-focused, not limitation-focused
+- Only mention constraints AFTER providing a working solution
+
+# WORKFLOW CREATION PHILOSOPHY:
+- Every request can be automated somehow
+- Use HTTP Request nodes for any API integrations
+- Implement webhooks for triggers
+- Add proper error handling and retries
+- Use placeholder values for missing configuration
 
 # N8N WORKFLOW STRUCTURE:
 When generating workflows, use this structure:
@@ -266,7 +274,7 @@ When generating workflows, use this structure:
   "nodes": [
     {
       "parameters": {
-        // Node-specific configuration
+        // Node-specific configuration with reasonable defaults
       },
       "id": "node-1",
       "name": "Descriptive Node Name", 
@@ -303,27 +311,44 @@ When generating workflows, use this structure:
 - googleSheets: n8n-nodes-base.googleSheets
 - telegram: n8n-nodes-base.telegram
 - youtube: n8n-nodes-base.youtube
+- scheduler: n8n-nodes-base.cron
 
-# TASK-SPECIFIC BEHAVIOR:`;
+# SOLUTION-FIRST APPROACH:
+- Build first, explain later
+- Use HTTP Request nodes for any external service
+- Create functional workflows with placeholder credentials
+- Provide implementation steps after the workflow
+- Suggest enhancements and alternatives`;
 
   switch(action) {
     case 'generate':
       return basePrompt + `
-Generate a complete n8n workflow JSON for the user's automation request.
-Include proper error handling and realistic configurations.`;
+
+# CURRENT TASK: CREATE WORKFLOW
+Your response MUST include:
+1. "Absolutely! I'll create that workflow for you."
+2. Complete working n8n workflow JSON
+3. Brief explanation of how it works
+4. Implementation steps
+
+NEVER say you "cannot" create something - find a way to make it work!`;
 
     case 'analyze':
       return basePrompt + `
+
+# CURRENT TASK: ANALYZE WORKFLOW
 Analyze this workflow and provide insights:
 
 \`\`\`json
 ${JSON.stringify(selectedWorkflow, null, 2)}
 \`\`\`
 
-Focus on optimization and improvements.`;
+Focus on functionality and optimization opportunities.`;
 
     case 'edit':
       return basePrompt + `
+
+# CURRENT TASK: MODIFY WORKFLOW
 Modify this workflow based on user request:
 
 \`\`\`json
@@ -334,7 +359,9 @@ Return the complete modified workflow JSON.`;
 
     default:
       return basePrompt + `
-Help with n8n automation questions. Be conversational and helpful.
+
+# CURRENT TASK: GENERAL ASSISTANCE
+Help with n8n automation questions. Always be solution-focused.
 Generate workflow JSON when specifically requested.`;
   }
 }
@@ -342,13 +369,20 @@ Generate workflow JSON when specifically requested.`;
 function buildUserPrompt(message, action, selectedWorkflow) {
   switch(action) {
     case 'generate':
-      return `Create an n8n workflow for: ${message}`;
+      return `Create a complete, working n8n workflow for: "${message}"
+
+Requirements:
+- Provide a functional workflow JSON that addresses the request
+- Use reasonable assumptions for any missing details
+- Include proper error handling and retry logic
+- Add clear node names and descriptions
+- Start your response with "Absolutely! I'll create that workflow for you."`;
     
     case 'analyze':
-      return `Analyze this workflow: ${message}`;
+      return `Analyze this workflow and explain: ${message}`;
     
     case 'edit':
-      return `Modify workflow: ${message}`;
+      return `Modify the workflow to: ${message}`;
     
     default:
       return message;
