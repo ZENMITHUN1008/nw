@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,8 +5,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Send, Download, Copy, Upload, ChevronDown, ChevronUp, Plus, RotateCcw, Save, Workflow, Sparkles, Code } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { AlertCircle, Send, Download, Copy, Upload, Settings, Bot, User, Zap, Code, Workflow, ChevronDown, ChevronUp, Trash2, Plus, Play, Pause, RotateCcw, Save, FileText, Terminal, Sparkles } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -33,14 +35,18 @@ export const AIPlayground: React.FC = () => {
   const [userMessage, setUserMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [generatedWorkflow, setGeneratedWorkflow] = useState<any>(null);
   const [workflowName, setWorkflowName] = useState('Generated Workflow');
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isChatVisible, setIsChatVisible] = useState(true);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState('chat');
   const [workflowContext, setWorkflowContext] = useState<WorkflowContext>({});
   const [isContextVisible, setIsContextVisible] = useState(false);
   const [credentials, setCredentials] = useState<any>(null);
+  const [selectedCredential, setSelectedCredential] = useState<string | null>(null);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -60,7 +66,7 @@ export const AIPlayground: React.FC = () => {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('n8n_connections')
+        .from('n8n_credentials')
         .select('*')
         .eq('user_id', user.id);
 
@@ -74,9 +80,9 @@ export const AIPlayground: React.FC = () => {
         return;
       }
 
-      const creds: any = {};
-      data?.forEach((cred: any) => {
-        creds[cred.instanceName] = cred.id;
+      const creds:any = {};
+      data.forEach((cred:any) => {
+        creds[cred.name] = cred.id;
       });
       setCredentials(creds);
     };
@@ -85,7 +91,11 @@ export const AIPlayground: React.FC = () => {
   }, [user, toast]);
 
   const handleCredentialChange = (credentialName: string) => {
-    // Handle credential selection
+    setSelectedCredential(credentialName);
+  };
+
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
   };
 
   const toggleChatVisibility = () => {
@@ -270,17 +280,18 @@ export const AIPlayground: React.FC = () => {
       });
   };
 
-  const generateAIResponse = async (userMessage: string, action = 'generate', workflow: any = null, context: WorkflowContext | null = null) => {
+  const generateAIResponse = async (userMessage: string, action = 'generate', workflow = null, context = null) => {
     try {
       setIsLoading(true);
+      setError(null);
       
       console.log('Starting AI generation with action:', action);
 
-      // Use the Supabase edge function
+      // Use the Supabase edge function instead of direct OpenAI API
       const { data, error } = await supabase.functions.invoke('workflow-generator', {
         body: {
           message: userMessage,
-          chatHistory: messages.map(msg => ({ role: msg.role, content: msg.content })),
+          chatHistory: messages,
           selectedWorkflow: workflow,
           action: action,
           workflowContext: context,
@@ -319,7 +330,7 @@ export const AIPlayground: React.FC = () => {
         },
         body: JSON.stringify({
           message: userMessage,
-          chatHistory: messages.map(msg => ({ role: msg.role, content: msg.content })),
+          chatHistory: messages,
           selectedWorkflow: workflow,
           action: action,
           workflowContext: context,
@@ -350,7 +361,7 @@ export const AIPlayground: React.FC = () => {
       setMessages(prev => [...prev, assistantMessage]);
 
       let buffer = '';
-      let currentWorkflow: any = null;
+      let currentWorkflow = null;
 
       try {
         while (true) {
@@ -392,7 +403,7 @@ export const AIPlayground: React.FC = () => {
                   ));
                 } else if (parsed.type === 'tool_start') {
                   console.log('Tool started:', parsed.content);
-                  assistantMessage.content += `\n\n🔧 **Tool** started...\n`;
+                  assistantMessage.content += `\n\n🔧 **${parsed.content?.tool || 'Tool'}** started...\n`;
                   setMessages(prev => prev.map(msg => 
                     msg.id === assistantMessage.id 
                       ? { ...msg, content: assistantMessage.content }
@@ -415,6 +426,7 @@ export const AIPlayground: React.FC = () => {
 
     } catch (error) {
       console.error('AI generation error:', error);
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
       
       // Add error message to chat
       const errorMessage: ChatMessage = {
@@ -432,7 +444,7 @@ export const AIPlayground: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className={`flex flex-col h-screen ${isFullScreen ? 'fullscreen' : ''}`}>
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center space-x-2">
           <Workflow className="w-6 h-6 text-muted-foreground" />
