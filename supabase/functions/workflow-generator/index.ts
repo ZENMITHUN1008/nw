@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -51,12 +50,13 @@ serve(async (req) => {
       );
     }
 
-    const { prompt, userContext } = await req.json();
-
-    if (!prompt) {
-      await logToSystem('warn', 'workflow-generator', 'Missing prompt in request');
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (error) {
+      await logToSystem('warn', 'workflow-generator', 'Invalid JSON in request body');
       return new Response(
-        JSON.stringify({ error: 'Prompt is required' }),
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -64,7 +64,24 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert n8n workflow designer. Create detailed n8n workflows based on user requirements.
+    const { message, action = 'chat', workflowContext } = requestData;
+
+    if (!message) {
+      await logToSystem('warn', 'workflow-generator', 'Missing message in request');
+      return new Response(
+        JSON.stringify({ error: 'Message is required' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Create system prompt based on action type
+    let systemPrompt = '';
+    
+    if (action === 'generate') {
+      systemPrompt = `You are an expert n8n workflow designer. Create detailed n8n workflows based on user requirements.
 
 Important guidelines:
 1. Always respond with valid JSON containing a workflow object
@@ -73,9 +90,9 @@ Important guidelines:
 4. Provide clear descriptions and documentation
 5. Ensure workflows are production-ready
 
-User Context: ${JSON.stringify(userContext || {})}
+Workflow Context: ${JSON.stringify(workflowContext || {})}
 
-Create a comprehensive n8n workflow for: ${prompt}
+Create a comprehensive n8n workflow for: ${message}
 
 Respond ONLY with valid JSON in this format:
 {
@@ -88,9 +105,20 @@ Respond ONLY with valid JSON in this format:
   },
   "explanation": "Step by step explanation of how the workflow works"
 }`;
+    } else {
+      // For chat/analysis
+      systemPrompt = `You are an AI assistant specializing in workflow automation and n8n. Help users understand, analyze, and optimize their workflows.
+
+Context: ${JSON.stringify(workflowContext || {})}
+
+User message: ${message}
+
+Provide helpful, accurate information about workflow automation, n8n, and best practices.`;
+    }
 
     await logToSystem('info', 'workflow-generator', 'Sending request to Gemini API', { 
-      promptLength: prompt.length 
+      messageLength: message.length,
+      action 
     });
 
     const controller = new AbortController();
@@ -150,7 +178,7 @@ Respond ONLY with valid JSON in this format:
         
         return new Response(
           JSON.stringify({ 
-            error: 'Failed to generate workflow',
+            error: 'Failed to generate response',
             details: `API responded with status ${response.status}` 
           }),
           { 
@@ -175,41 +203,51 @@ Respond ONLY with valid JSON in this format:
 
       const generatedText = data.candidates[0].content.parts[0].text;
       
-      // Try to parse the JSON response
-      let workflowData;
-      try {
-        // Extract JSON from the response (in case there's extra text)
-        const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          workflowData = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No JSON found in response');
+      let responseData;
+      
+      if (action === 'generate') {
+        // Try to parse the JSON response for workflow generation
+        try {
+          // Extract JSON from the response (in case there's extra text)
+          const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            responseData = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No JSON found in response');
+          }
+        } catch (parseError) {
+          await logToSystem('warn', 'workflow-generator', 'Failed to parse AI response as JSON', { 
+            error: parseError.message,
+            response: generatedText 
+          });
+          
+          // Return a structured response even if parsing fails
+          responseData = {
+            workflow: {
+              name: "Generated Workflow",
+              description: "AI-generated workflow based on your requirements",
+              nodes: [],
+              connections: {},
+              settings: {}
+            },
+            explanation: generatedText
+          };
         }
-      } catch (parseError) {
-        await logToSystem('warn', 'workflow-generator', 'Failed to parse AI response as JSON', { 
-          error: parseError.message,
-          response: generatedText 
-        });
-        
-        // Return a structured response even if parsing fails
-        workflowData = {
-          workflow: {
-            name: "Generated Workflow",
-            description: "AI-generated workflow based on your requirements",
-            nodes: [],
-            connections: {},
-            settings: {}
-          },
-          explanation: generatedText
+      } else {
+        // For chat responses, return the text directly
+        responseData = {
+          response: generatedText,
+          type: 'chat'
         };
       }
 
-      await logToSystem('info', 'workflow-generator', 'Workflow generated successfully', { 
-        workflowName: workflowData.workflow?.name || 'Unknown' 
+      await logToSystem('info', 'workflow-generator', 'Response generated successfully', { 
+        action,
+        responseType: action === 'generate' ? 'workflow' : 'chat'
       });
 
       return new Response(
-        JSON.stringify(workflowData),
+        JSON.stringify(responseData),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }

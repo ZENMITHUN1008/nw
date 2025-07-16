@@ -3,7 +3,8 @@ import { supabase } from '../integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Users, Activity, Globe, Zap, TrendingUp } from 'lucide-react';
+import { Users, Activity, Globe, Zap, TrendingUp, Shield } from 'lucide-react';
+import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 
 // Updated interfaces to match the actual database schema
@@ -254,12 +255,34 @@ const MasterPortal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">Master Portal</h1>
-          <p className="text-muted-foreground">Real-time monitoring and analytics dashboard</p>
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
+      {/* Header */}
+      <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50 p-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 rounded-lg bg-purple-600/10 border border-purple-600/20">
+                <Shield className="w-8 h-8 text-purple-600" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold text-foreground">Master Portal</h1>
+                <p className="text-muted-foreground">Real-time monitoring and analytics dashboard</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              onClick={() => window.history.back()}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              ← Back
+            </Button>
+          </div>
         </div>
+      </header>
+      
+      <div className="max-w-7xl mx-auto p-6">
 
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">

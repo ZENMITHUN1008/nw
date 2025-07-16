@@ -16,8 +16,9 @@ import { Badge } from "../components/ui/badge";
 import { Progress } from "../components/ui/progress";
 import { supabase } from "../integrations/supabase/client";
 import { useSubscription } from "../hooks/useSubscription";
-import { Grid, List, User, Settings, LogOut, Crown, Shield } from "lucide-react";
+import { Grid, List, User, Settings, LogOut, Crown, Shield, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { Logo } from "../components/Logo";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -94,11 +95,12 @@ const Dashboard = () => {
   const usagePercentage = (usageData.workflowsUsed / usageData.workflowsLimit) * 100;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
+            <Logo />
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
             {isFreePlan && (
               <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
@@ -107,6 +109,15 @@ const Dashboard = () => {
             )}
           </div>
           <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/ai-playground')}
+              className="text-primary hover:bg-primary/10"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              AI Playground
+            </Button>
             {isFreePlan && (
               <Button
                 variant="outline"
