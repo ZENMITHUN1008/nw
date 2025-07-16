@@ -1,5 +1,6 @@
 
 import { supabase } from "../integrations/supabase/client";
+import { n8nService } from "./n8nService";
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -17,6 +18,7 @@ export interface WorkflowGenerationResponse {
   workflow: any;
   explanation: string;
   estimatedComplexity: 'low' | 'medium' | 'high';
+  deploymentResult?: any;
 }
 
 export interface AIWorkflowRequest {
@@ -28,10 +30,11 @@ export interface AIWorkflowRequest {
   selectedWorkflow?: any;
   action?: 'generate' | 'analyze' | 'edit' | 'chat';
   workflowContext?: any;
+  autoDeployToN8n?: boolean;
 }
 
 export interface StreamChunk {
-  type: 'text' | 'workflow' | 'error' | 'complete' | 'tool_start' | 'tool_input' | 'tool_result';
+  type: 'text' | 'workflow' | 'error' | 'complete' | 'deployment' | 'tool_start' | 'tool_input' | 'tool_result';
   content: string | any;
 }
 
@@ -67,14 +70,31 @@ class AIService {
         throw new Error(`AI service error: ${response.error.message}`);
       }
 
+      const workflow = response.data?.workflow || {
+        name: "Generated Workflow",
+        nodes: [],
+        connections: {}
+      };
+
+      let deploymentResult = null;
+      
+      // Auto-deploy to n8n if workflow was generated successfully
+      if (workflow && workflow.nodes && workflow.nodes.length > 0) {
+        try {
+          console.log('Auto-deploying workflow to n8n...');
+          deploymentResult = await n8nService.createWorkflow(workflow);
+          console.log('Workflow deployed successfully:', deploymentResult);
+        } catch (deployError) {
+          console.error('Failed to deploy workflow to n8n:', deployError);
+          deploymentResult = { error: deployError.message };
+        }
+      }
+
       return {
-        workflow: response.data?.workflow || {
-          name: "Generated Workflow",
-          nodes: [],
-          connections: {}
-        },
+        workflow,
         explanation: response.data?.explanation || 'Workflow generated successfully',
-        estimatedComplexity: response.data?.estimatedComplexity || 'medium'
+        estimatedComplexity: response.data?.estimatedComplexity || 'medium',
+        deploymentResult
       };
     } catch (error) {
       console.error('Error generating workflow:', error);
@@ -102,12 +122,24 @@ class AIService {
       // Since we're not getting a stream from supabase.functions.invoke,
       // we'll yield the complete response
       if (response.data) {
-        if (response.data.workflow) {
-          yield { type: 'workflow', content: response.data.workflow };
-        }
-        
         if (response.data.content || response.data.explanation) {
           yield { type: 'text', content: response.data.content || response.data.explanation };
+        }
+        
+        if (response.data.workflow) {
+          yield { type: 'workflow', content: response.data.workflow };
+          
+          // Auto-deploy to n8n if enabled and workflow is valid
+          if (request.autoDeployToN8n !== false && response.data.workflow.nodes && response.data.workflow.nodes.length > 0) {
+            try {
+              yield { type: 'deployment', content: 'Deploying workflow to n8n...' };
+              const deploymentResult = await n8nService.createWorkflow(response.data.workflow);
+              yield { type: 'deployment', content: `✅ Workflow deployed successfully to n8n! ID: ${deploymentResult.id}` };
+            } catch (deployError) {
+              console.error('Failed to deploy workflow to n8n:', deployError);
+              yield { type: 'deployment', content: `❌ Failed to deploy to n8n: ${deployError.message}` };
+            }
+          }
         }
       }
 
@@ -141,6 +173,18 @@ class AIService {
       };
     } catch (error) {
       console.error('Error in chat:', error);
+      throw error;
+    }
+  }
+
+  async deployWorkflowToN8n(workflow: any): Promise<any> {
+    try {
+      console.log('Deploying workflow to n8n:', workflow.name);
+      const result = await n8nService.createWorkflow(workflow);
+      console.log('Deployment successful:', result);
+      return result;
+    } catch (error) {
+      console.error('Deployment failed:', error);
       throw error;
     }
   }

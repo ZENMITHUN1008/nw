@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -55,45 +56,24 @@ serve(async (req) => {
       )
     }
 
-    const url = new URL(req.url)
-    console.log('Full URL:', req.url)
-    console.log('Pathname:', url.pathname)
+    const requestBody = req.method !== 'GET' ? await req.json() : null
+    const { path, method = 'GET', body, headers } = requestBody || {}
     
-    // More flexible path parsing - handle both local and production URLs
-    let path = url.pathname
-    
-    // Remove the functions prefix if present
-    if (path.startsWith('/functions/v1/n8n-proxy')) {
-      path = path.replace('/functions/v1/n8n-proxy', '')
-    } else if (path.startsWith('/n8n-proxy')) {
-      path = path.replace('/n8n-proxy', '')
-    }
-    
-    // Ensure path starts with /
-    if (path && !path.startsWith('/')) {
-      path = '/' + path
-    }
-    
-    console.log('Parsed path:', path)
-    console.log('Method:', req.method)
+    console.log('Request details:', { path, method, hasBody: !!body })
     
     // Route handling
-    if (req.method === 'POST' && path === '/test-connection') {
-      console.log('Handling test-connection')
-      return await handleTestConnection(req, user.id, supabaseClient)
-    } else if (req.method === 'POST' && path === '/save-connection') {
-      console.log('Handling save-connection')
-      return await handleSaveConnection(req, user.id, supabaseClient)
-    } else if (req.method === 'GET' && path === '/connections') {
-      console.log('Handling get connections')
+    if (path === '/test-connection') {
+      return await handleTestConnection(requestBody, user.id, supabaseClient)
+    } else if (path === '/save-connection') {
+      return await handleSaveConnection(requestBody, user.id, supabaseClient)
+    } else if (path === '/connections') {
       return await handleGetConnections(user.id, supabaseClient)
-    } else if (req.method === 'DELETE' && path.startsWith('/connections/')) {
-      console.log('Handling delete connection')
+    } else if (path && path.startsWith('/connections/')) {
       const connectionId = path.split('/')[2]
       return await handleDeleteConnection(connectionId, user.id, supabaseClient)
-    } else if (path.startsWith('/proxy/')) {
-      console.log('Handling n8n proxy')
-      return await handleN8nProxy(req, user.id, supabaseClient, path.replace('/proxy', ''))
+    } else if (path && path.startsWith('/proxy/')) {
+      const n8nPath = path.replace('/proxy', '')
+      return await handleN8nProxy(method, n8nPath, body, headers, user.id, supabaseClient)
     }
 
     console.log('No matching route found for:', path)
@@ -101,8 +81,7 @@ serve(async (req) => {
       JSON.stringify({ 
         error: 'Not found',
         path: path,
-        method: req.method,
-        fullUrl: req.url
+        method: method
       }), 
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
@@ -119,8 +98,8 @@ serve(async (req) => {
   }
 })
 
-async function handleTestConnection(req: Request, userId: string, supabase: any) {
-  const { baseUrl, apiKey, instanceName } = await req.json()
+async function handleTestConnection(requestBody: any, userId: string, supabase: any) {
+  const { baseUrl, apiKey, instanceName } = requestBody
 
   try {
     // Test connection to n8n instance
@@ -187,8 +166,8 @@ async function handleTestConnection(req: Request, userId: string, supabase: any)
   }
 }
 
-async function handleSaveConnection(req: Request, userId: string, supabase: any) {
-  const { baseUrl, apiKey, instanceName, workflowCount, version } = await req.json()
+async function handleSaveConnection(requestBody: any, userId: string, supabase: any) {
+  const { baseUrl, apiKey, instanceName, workflowCount, version } = requestBody
 
   try {
     // First, deactivate any existing active connections
@@ -257,10 +236,10 @@ async function handleGetConnections(userId: string, supabase: any) {
       throw new Error(`Database error: ${error.message}`)
     }
 
-    // Don't return API keys in the response
+    // Don't return API keys in the response for security
     const sanitizedData = data.map((conn: any) => ({
       ...conn,
-      api_key: '***hidden***'
+      api_key: conn.api_key ? '***hidden***' : null
     }))
 
     return new Response(
@@ -325,7 +304,7 @@ async function handleDeleteConnection(connectionId: string, userId: string, supa
   }
 }
 
-async function handleN8nProxy(req: Request, userId: string, supabase: any, n8nPath: string) {
+async function handleN8nProxy(method: string, n8nPath: string, body: any, requestHeaders: any, userId: string, supabase: any) {
   try {
     // Get active connection for user
     const { data: connection, error } = await supabase
@@ -336,23 +315,38 @@ async function handleN8nProxy(req: Request, userId: string, supabase: any, n8nPa
       .single()
 
     if (error || !connection) {
-      throw new Error('No active n8n connection found')
+      throw new Error('No active n8n connection found. Please set up your n8n connection first.')
     }
 
-    // Proxy request to n8n instance
+    // Construct the full n8n API URL
     const n8nUrl = `${connection.base_url}/api/v1${n8nPath}`
-    const body = req.method !== 'GET' ? await req.text() : undefined
+    
+    console.log(`Proxying ${method} request to: ${n8nUrl}`)
+    
+    // Prepare headers for n8n API
+    const headers = {
+      'X-N8N-API-KEY': connection.api_key,
+      'Content-Type': 'application/json',
+      ...requestHeaders
+    }
 
+    // Make request to n8n instance
     const response = await fetch(n8nUrl, {
-      method: req.method,
-      headers: {
-        'X-N8N-API-KEY': connection.api_key,
-        'Content-Type': 'application/json',
-      },
-      body: body
+      method: method,
+      headers: headers,
+      body: body ? JSON.stringify(body) : undefined
     })
 
-    const responseData = await response.text()
+    const responseText = await response.text()
+    let responseData
+
+    try {
+      responseData = JSON.parse(responseText)
+    } catch (e) {
+      responseData = { message: responseText }
+    }
+
+    console.log(`N8N API response status: ${response.status}`)
 
     // Update last connected timestamp
     await supabase
@@ -363,12 +357,14 @@ async function handleN8nProxy(req: Request, userId: string, supabase: any, n8nPa
       })
       .eq('id', connection.id)
 
-    return new Response(responseData, {
+    // Return the response from n8n
+    return new Response(JSON.stringify(responseData), {
       status: response.status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
+    console.error('N8N proxy error:', error)
     return new Response(
       JSON.stringify({
         success: false,
