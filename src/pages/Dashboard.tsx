@@ -689,6 +689,18 @@ export const Dashboard: React.FC = () => {
 
       {/* Render Content */}
       {renderMainContent()}
+
+      {/* Master Portal Button - Fixed at bottom */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <button
+          onClick={() => window.open('/master', '_blank')}
+          className="group bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 rounded-2xl font-bold transition-all duration-300 shadow-2xl shadow-purple-500/30 hover:shadow-purple-500/40 hover:scale-105 hover:-translate-y-1 flex items-center space-x-3"
+        >
+          <Database className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+          <span>Enter Master Portal</span>
+          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+        </button>
+      </div>
       
     </DashboardWrapper>
     </>
