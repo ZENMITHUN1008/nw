@@ -274,7 +274,7 @@ class WebSubscriptionService {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // @ts-expect-error - keeping for future functionality
   private _storeSubscriptionLocally(productId: string): void {
     try {
       const subscriptionData = {

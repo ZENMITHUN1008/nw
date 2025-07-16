@@ -127,13 +127,13 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
   // Voice-specific state
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   // Voice and UI state variables (to be used when features are implemented)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // @ts-expect-error - keeping for future functionality
   const [isListening, setIsListening] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // @ts-expect-error - keeping for future functionality  
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // @ts-expect-error - keeping for future functionality
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // @ts-expect-error - keeping for future functionality
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
