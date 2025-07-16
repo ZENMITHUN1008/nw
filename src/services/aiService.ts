@@ -1,3 +1,4 @@
+
 import { supabase } from "../integrations/supabase/client";
 
 export interface ChatMessage {
@@ -33,10 +34,6 @@ export interface StreamChunk {
   type: 'text' | 'workflow' | 'error' | 'complete' | 'tool_start' | 'tool_input' | 'tool_result';
   content: string | any;
 }
-
-// Supabase configuration constants
-const SUPABASE_URL = "https://kqemyueobhimorhdxodh.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxZW15dWVvYmhpbW9yaGR4b2RoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI2NDU5MjEsImV4cCI6MjA2ODIyMTkyMX0.maTYK02fvFR-qfqqQaI0O_LxCJ8tHZ1MBLvZkJcqfhk";
 
 class AIService {
   async testConnection(): Promise<boolean> {
@@ -87,65 +84,35 @@ class AIService {
 
   async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<StreamChunk, void, unknown> {
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/workflow-generator`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
+      // Use supabase.functions.invoke for proper authentication
+      const response = await supabase.functions.invoke('workflow-generator', {
+        body: {
           message: request.message || request.description,
           chatHistory: request.chatHistory,
           selectedWorkflow: request.selectedWorkflow,
           action: request.action || 'generate',
           workflowContext: request.workflowContext
-        }),
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`AI service error: ${response.statusText}`);
+      if (response.error) {
+        throw new Error(`AI service error: ${response.error.message}`);
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No response stream available');
-      }
-
-      const decoder = new TextDecoder();
-      
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            yield { type: 'complete', content: '' };
-            break;
-          }
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') {
-                yield { type: 'complete', content: '' };
-                return;
-              }
-
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.type && parsed.content) {
-                  yield parsed as StreamChunk;
-                }
-              } catch (e) {
-                // Skip invalid JSON chunks
-              }
-            }
-          }
+      // Since we're not getting a stream from supabase.functions.invoke,
+      // we'll yield the complete response
+      if (response.data) {
+        if (response.data.workflow) {
+          yield { type: 'workflow', content: response.data.workflow };
         }
-      } finally {
-        reader.releaseLock();
+        
+        if (response.data.content || response.data.explanation) {
+          yield { type: 'text', content: response.data.content || response.data.explanation };
+        }
       }
+
+      yield { type: 'complete', content: '' };
+      
     } catch (error) {
       console.error('Error in streaming workflow generation:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
