@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ChatMessage {
@@ -19,7 +18,6 @@ export interface WorkflowGenerationResponse {
   estimatedComplexity: 'low' | 'medium' | 'high';
 }
 
-// Add missing interface for AIPlayground compatibility
 export interface AIWorkflowRequest {
   description: string;
   requirements?: string[];
@@ -30,23 +28,18 @@ class AIService {
   private apiKey: string | null = null;
 
   constructor() {
-    // API key will be loaded from environment or user settings
     this.loadApiKey();
   }
 
   private async loadApiKey() {
-    // Try to load from environment first
     if (import.meta.env.VITE_OPENAI_API_KEY) {
       this.apiKey = import.meta.env.VITE_OPENAI_API_KEY;
       return;
     }
 
-    // Load from user settings if authenticated
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // In a real implementation, you might store API keys in user settings
-        // For now, we'll use a placeholder
         this.apiKey = null;
       }
     } catch (error) {
@@ -86,7 +79,7 @@ class AIService {
           'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'gpt-4.1-2025-04-14',
           messages: [
             {
               role: 'system',
@@ -119,11 +112,9 @@ class AIService {
         throw new Error('No response from AI service');
       }
 
-      // Try to parse JSON response
       try {
         return JSON.parse(content);
       } catch {
-        // If not JSON, create a structured response
         return {
           workflow: {
             name: "Generated Workflow",
@@ -140,7 +131,6 @@ class AIService {
     }
   }
 
-  // Add streaming workflow generation for AIPlayground compatibility
   async generateWorkflowStream(request: AIWorkflowRequest): Promise<AsyncGenerator<string, void, unknown>> {
     if (!this.apiKey) {
       throw new Error('OpenAI API key not configured. Please add your API key in settings.');
@@ -153,7 +143,7 @@ class AIService {
         'Authorization': `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4.1-2025-04-14',
         messages: [
           {
             role: 'system',
@@ -230,7 +220,7 @@ class AIService {
           'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'gpt-4.1-2025-04-14',
           messages: messages.map(msg => ({
             role: msg.role,
             content: msg.content
@@ -262,7 +252,6 @@ class AIService {
     }
   }
 
-  // Save conversation to Supabase
   async saveConversation(sessionId: string, messages: ChatMessage[]): Promise<void> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -289,7 +278,6 @@ class AIService {
     }
   }
 
-  // Load conversation from Supabase
   async loadConversation(sessionId: string): Promise<ChatMessage[]> {
     try {
       const { data: { user } } = await supabase.auth.getUser();

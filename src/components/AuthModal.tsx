@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { X, Eye, EyeOff, Mail, Lock, User, Github } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
@@ -8,13 +7,15 @@ interface AuthModalProps {
   onClose: () => void;
   mode?: 'signin' | 'signup';
   onModeChange?: (mode: 'signin' | 'signup') => void;
+  onSuccess?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ 
   isOpen, 
   onClose, 
   mode: initialMode = 'signin', 
-  onModeChange 
+  onModeChange,
+  onSuccess 
 }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
@@ -64,6 +65,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         });
 
         if (error) throw error;
+        
+        if (onSuccess) {
+          onSuccess();
+        }
         onClose();
       }
     } catch (error: any) {
@@ -86,6 +91,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       });
 
       if (error) throw error;
+      
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error: any) {
       setError(error.message || 'An error occurred');
     } finally {
