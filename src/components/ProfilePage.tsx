@@ -17,7 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../integrations/supabase/client";
 
 interface ProfilePageProps {
   onBack: () => void;

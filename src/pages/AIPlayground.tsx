@@ -384,8 +384,9 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
 
       // Prepare chat history for AI
       const chatHistory = messages.slice(1).map(msg => ({
-        role: msg.type === 'user' ? 'user' : 'assistant',
-        content: msg.content
+        role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
+        content: msg.content,
+        timestamp: msg.timestamp
       }));
 
       // Determine action type based on context

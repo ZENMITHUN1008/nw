@@ -20,16 +20,19 @@ export interface WorkflowGenerationResponse {
 }
 
 export interface AIWorkflowRequest {
-  description: string;
+  description?: string;
   requirements?: string[];
   integrations?: string[];
   message?: string;
   chatHistory?: ChatMessage[];
+  selectedWorkflow?: any;
+  action?: 'generate' | 'analyze' | 'edit' | 'chat';
+  workflowContext?: any;
 }
 
 export interface StreamChunk {
-  type: 'text' | 'error' | 'complete';
-  content: string;
+  type: 'text' | 'workflow' | 'error' | 'complete' | 'tool_start' | 'tool_input' | 'tool_result';
+  content: string | any;
 }
 
 class AIService {
@@ -270,7 +273,7 @@ class AIService {
         .upsert({
           user_id: user.id,
           session_id: sessionId,
-          messages: messages,
+          messages: messages as any,
           context: {
             active_workflows: [],
             user_preferences: {},
@@ -300,7 +303,7 @@ class AIService {
 
       if (error || !data) return [];
 
-      return data.messages as ChatMessage[];
+      return data.messages as unknown as ChatMessage[];
     } catch (error) {
       console.error('Error loading conversation:', error);
       return [];

@@ -18,7 +18,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../integrations/supabase/client";
 
 interface MCPServer {
   id?: string;
@@ -142,6 +142,11 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
       console.log('User from hook:', user?.id);
       console.log('User match:', currentUser?.id === user?.id);
       
+      if (!user?.id) {
+        console.log('No user ID available for MCP servers');
+        return;
+      }
+      
       // Check auth session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       console.log('Current session:', session?.user?.id, sessionError);
@@ -150,14 +155,14 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
       const { data: userData, error: userDataError } = await supabase
         .from('mcp_servers')
         .select('*')
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
       console.log('User-specific MCP servers:', userData, userDataError);
       
       // Check if RLS is causing issues by checking count
       const { count, error: countError } = await supabase
         .from('mcp_servers')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
       console.log('Count of user MCP servers:', count, countError);
       
       console.log('=== MCP DEBUG END ===');
@@ -201,7 +206,21 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
       }
       
       console.log('Loaded MCP servers:', data);
-      setServers(data || []);
+      const transformedServers = (data || []).map(server => ({
+        id: server.id,
+        name: server.name,
+        url: server.url,
+        authorization_token: server.authorization_token || undefined,
+        status: (server.status as 'connected' | 'disconnected' | 'testing') || 'disconnected',
+        tool_configuration: (typeof server.tool_configuration === 'object' && 
+          server.tool_configuration !== null && 
+          'enabled' in server.tool_configuration) ? 
+          server.tool_configuration as { enabled: boolean; allowed_tools?: string[] } : 
+          { enabled: true },
+        tools: Array.isArray(server.tools) ? server.tools as unknown as MCPTool[] : [],
+        created_at: server.created_at
+      }));
+      setServers(transformedServers);
     } catch (error) {
       console.error('Error loading MCP servers:', error);
       alert('Failed to load MCP servers. Check console for details.');
@@ -265,7 +284,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
       url: validation.data.url,
       authorization_token: validation.data.authorization_token || null,
       tool_configuration: validation.data.tool_configuration || { enabled: true, allowed_tools: [] },
-      user_id: user?.id,
+      user_id: user?.id!,
       status: 'disconnected'
     };
 
@@ -281,7 +300,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
       if (!supabase) throw new Error('Supabase not configured');
       const { error } = await supabase
         .from('mcp_servers')
-        .insert([serverData]);
+        .insert(serverData);
 
       if (error) throw error;
     }
@@ -340,7 +359,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
             status: 'connected',
             tools: result.tools 
           })
-          .eq('id', server.id);
+          .eq('id', server.id!);
         
         await loadMCPServers();
       } else {

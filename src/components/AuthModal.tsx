@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Eye, EyeOff, Mail, Lock, User, Github } from 'lucide-react';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../integrations/supabase/client";
 
 interface AuthModalProps {
   isOpen: boolean;

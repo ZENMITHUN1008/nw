@@ -17,7 +17,7 @@ export const useN8n = () => {
 
   // Set active connection when connections change
   useEffect(() => {
-    const active = connections.find(conn => conn.is_active);
+    const active = connections.find(conn => conn.isActive);
     setActiveConnection(active || null);
     
     if (active) {
@@ -29,12 +29,8 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await n8nService.getConnections();
-      if (response.success) {
-        setConnections(response.data);
-      } else {
-        setError(response.error || 'Failed to load connections');
-      }
+      const connections = await n8nService.getConnections();
+      setConnections(connections);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load connections');
     } finally {
