@@ -14,7 +14,195 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      conversation_memory: {
+        Row: {
+          context: Json
+          created_at: string
+          id: string
+          messages: Json
+          session_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context?: Json
+          created_at?: string
+          id?: string
+          messages?: Json
+          session_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context?: Json
+          created_at?: string
+          id?: string
+          messages?: Json
+          session_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mcp_servers: {
+        Row: {
+          authorization_token: string | null
+          created_at: string
+          id: string
+          name: string
+          status: string | null
+          tool_configuration: Json | null
+          tools: Json | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          authorization_token?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          status?: string | null
+          tool_configuration?: Json | null
+          tools?: Json | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          authorization_token?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string | null
+          tool_configuration?: Json | null
+          tools?: Json | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      n8n_connections: {
+        Row: {
+          api_key: string
+          base_url: string
+          connection_status: string
+          created_at: string
+          execution_count: number | null
+          id: string
+          instance_name: string
+          is_active: boolean
+          last_connected: string | null
+          updated_at: string
+          user_id: string
+          version: string | null
+          workflow_count: number | null
+        }
+        Insert: {
+          api_key: string
+          base_url: string
+          connection_status?: string
+          created_at?: string
+          execution_count?: number | null
+          id?: string
+          instance_name: string
+          is_active?: boolean
+          last_connected?: string | null
+          updated_at?: string
+          user_id: string
+          version?: string | null
+          workflow_count?: number | null
+        }
+        Update: {
+          api_key?: string
+          base_url?: string
+          connection_status?: string
+          created_at?: string
+          execution_count?: number | null
+          id?: string
+          instance_name?: string
+          is_active?: boolean
+          last_connected?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: string | null
+          workflow_count?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          company: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          location: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          company?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          location?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          location?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          email_notifications: boolean
+          language: string
+          marketing_emails: boolean
+          theme: string
+          timezone: string
+          updated_at: string
+          user_id: string
+          workflow_notifications: boolean
+        }
+        Insert: {
+          email_notifications?: boolean
+          language?: string
+          marketing_emails?: boolean
+          theme?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+          workflow_notifications?: boolean
+        }
+        Update: {
+          email_notifications?: boolean
+          language?: string
+          marketing_emails?: boolean
+          theme?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+          workflow_notifications?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,54 +1,46 @@
-import { useState, useEffect } from 'react';
-import { authService } from '../lib/supabase';
-import type { User, Session } from '@supabase/supabase-js';
 
-interface AuthState {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-}
+import { useState, useEffect } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from "@/integrations/supabase/client";
 
 export const useAuth = () => {
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    session: null,
-    loading: true,
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
-      const { session } = await authService.getSession();
-      setAuthState({
-        user: session?.user ?? null,
-        session: session,
-        loading: false,
-      });
-    };
-
-    getInitialSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = authService.onAuthStateChange(
-      (_event, session) => {
-        setAuthState({
-          user: session?.user ?? null,
-          session: session,
-          loading: false,
-        });
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
     );
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.id);
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
-    setAuthState(prev => ({ ...prev, loading: true }));
-    await authService.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return {
-    ...authState,
+    user,
+    session,
+    loading,
     signOut,
   };
 };

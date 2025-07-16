@@ -1,385 +1,278 @@
-import { supabase } from '../lib/supabase';
+
+import { supabase } from "@/integrations/supabase/client";
 
 export interface N8nConnection {
-  id: string;
-  user_id: string;
+  id?: string;
   instance_name: string;
   base_url: string;
   api_key: string;
-  is_active: boolean;
-  last_connected: string | null;
-  connection_status: 'connected' | 'disconnected' | 'error';
-  version: string | null;
-  workflow_count: number;
-  execution_count: number;
-  created_at: string;
-  updated_at: string;
+  is_active?: boolean;
+  connection_status?: 'connected' | 'disconnected' | 'error';
+  version?: string;
+  workflow_count?: number;
+  execution_count?: number;
+  last_connected?: string;
 }
 
 export interface N8nWorkflow {
   id: string;
   name: string;
   active: boolean;
-  nodes: any[];
-  connections: any;
   createdAt: string;
   updatedAt: string;
-  tags: string[];
+  nodes: any[];
+  connections: any;
 }
 
 export interface N8nExecution {
   id: string;
   workflowId: string;
   mode: string;
-  status: 'success' | 'error' | 'running' | 'waiting';
+  retryOf?: string;
+  status: 'success' | 'error' | 'waiting' | 'running';
   startedAt: string;
-  finishedAt: string | null;
-  data: any;
+  stoppedAt?: string;
+  data?: any;
 }
 
 class N8nService {
-  private async getAuthHeaders() {
-    if (!supabase) throw new Error('Supabase not configured');
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw new Error('Not authenticated');
-    }
-    return {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    };
-  }
-
-  // Use Supabase Edge Function proxy for all n8n API calls
-  private async makeProxiedN8nRequest(endpoint: string, options: RequestInit = {}) {
-    const headers = await this.getAuthHeaders();
-    const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const url = `${baseUrl}/functions/v1/n8n-proxy/proxy${endpoint}`;
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...headers,
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Proxy API Error: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    return response.json();
-  }
-
-  // Database operations
-  // @ts-expect-error - keeping for future functionality
-  private async _saveConnectionToDb(connection: Partial<N8nConnection>) {
-    if (!supabase) throw new Error('Supabase not configured');
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
-
-    // First, deactivate any existing active connections
-    await supabase
-      .from('n8n_connections')
-      .update({ is_active: false })
-      .eq('user_id', user.id);
-
-    // Save new connection
-    const { data, error } = await supabase
-      .from('n8n_connections')
-      .insert({
-        user_id: user.id,
-        instance_name: connection.instance_name,
-        base_url: connection.base_url,
-        api_key: connection.api_key,
-        is_active: true,
-        last_connected: new Date().toISOString(),
-        connection_status: 'connected',
-        version: connection.version || 'Unknown',
-        workflow_count: connection.workflow_count || 0,
-        execution_count: 0
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(`Database error: ${error.message}`);
-    }
-
-    return data;
-  }
-
-  // Connection Management - Use dedicated proxy endpoints
-  async testConnection(baseUrl: string, apiKey: string, instanceName: string) {
+  async testConnection(connection: Omit<N8nConnection, 'id'>): Promise<boolean> {
     try {
-      console.log('Testing n8n connection:', { baseUrl, instanceName });
-      
-      const headers = await this.getAuthHeaders();
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const url = `${supabaseUrl}/functions/v1/n8n-proxy/test-connection`;
-      
-      // Debug logging
-      console.log('VITE_SUPABASE_URL:', supabaseUrl);
-      console.log('Constructed URL:', url);
-      console.log('Headers:', headers);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          baseUrl: baseUrl.replace(/\/$/, ''), // Remove trailing slash
-          apiKey,
-          instanceName
-        }),
+      const response = await fetch(`${connection.base_url}/api/v1/workflows`, {
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Test connection failed: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('Connection test result:', result);
-
-      return result;
-
+      return response.ok;
     } catch (error) {
-      console.error('Connection test failed:', error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Connection test failed'
-      };
+      console.error('Error testing n8n connection:', error);
+      return false;
     }
   }
 
-  async saveConnection(baseUrl: string, apiKey: string, instanceName: string, workflowCount?: number, version?: string) {
+  async saveConnection(connection: Omit<N8nConnection, 'id'>): Promise<N8nConnection | null> {
     try {
-      const headers = await this.getAuthHeaders();
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const url = `${supabaseUrl}/functions/v1/n8n-proxy/save-connection`;
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          baseUrl: baseUrl.replace(/\/$/, ''),
-          apiKey,
-          instanceName,
-          workflowCount: workflowCount || 0,
-          version: version || 'Unknown'
-        }),
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Save connection failed: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-
-      return result;
-
-    } catch (error) {
-      console.error('Save connection failed:', error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to save connection'
-      };
-    }
-  }
-
-  async getConnections(): Promise<{ success: boolean; data: N8nConnection[] }> {
-    try {
-      const headers = await this.getAuthHeaders();
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const url = `${supabaseUrl}/functions/v1/n8n-proxy/connections`;
-      
-      // Debug logging
-      console.log('Getting connections from:', url);
-      console.log('Headers:', headers);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-      });
-
-      console.log('Get connections response status:', response.status);
-      console.log('Get connections response ok:', response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log('Get connections error text:', errorText);
-        throw new Error(`Get connections failed: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('Get connections result:', result);
-      return result;
-
-    } catch (error) {
-      console.error('Get connections failed:', error);
-      return {
-        success: false,
-        data: []
-      };
-    }
-  }
-
-  async deleteConnection(connectionId: string) {
-    try {
-      const headers = await this.getAuthHeaders();
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const url = `${supabaseUrl}/functions/v1/n8n-proxy/connections/${connectionId}`;
-      
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Delete connection failed: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      return result;
-
-    } catch (error) {
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to delete connection'
-      };
-    }
-  }
-
-  // Get active connection for API calls
-  private async getActiveConnection(): Promise<N8nConnection> {
-    if (!supabase) throw new Error('Supabase not configured');
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const { data, error } = await supabase
-      .from('n8n_connections')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single();
-
-    if (error || !data) {
-      throw new Error('No active n8n connection found. Please connect your n8n instance first.');
-    }
-
-    return data;
-  }
-
-  // Workflow Management - Use proxy
-  async getWorkflows(): Promise<N8nWorkflow[]> {
-    try {
-      const response = await this.makeProxiedN8nRequest('/workflows');
-      
-      // Update last connected timestamp
-      const connection = await this.getActiveConnection();
-      if (supabase) {
-        await supabase
+      const { data, error } = await supabase
         .from('n8n_connections')
-        .update({ 
-          last_connected: new Date().toISOString(),
-          connection_status: 'connected'
-        })
-        .eq('id', connection.id);
-      }
+        .insert([
+          {
+            ...connection,
+            user_id: user.id,
+          }
+        ])
+        .select()
+        .single();
 
-      return Array.isArray(response) ? response : response.data || [];
+      if (error) throw error;
+      return data;
     } catch (error) {
-      console.error('Get workflows failed:', error);
-      throw error;
+      console.error('Error saving n8n connection:', error);
+      return null;
     }
   }
 
-  async getWorkflow(workflowId: string): Promise<N8nWorkflow> {
-    return this.makeProxiedN8nRequest(`/workflows/${workflowId}`);
-  }
-
-  async createWorkflow(workflow: any): Promise<N8nWorkflow> {
-    return this.makeProxiedN8nRequest('/workflows', {
-      method: 'POST',
-      body: JSON.stringify(workflow),
-    });
-  }
-
-  async updateWorkflow(workflowId: string, workflow: any): Promise<N8nWorkflow> {
-    return this.makeProxiedN8nRequest(`/workflows/${workflowId}`, {
-      method: 'PUT',
-      body: JSON.stringify(workflow),
-    });
-  }
-
-  async deleteWorkflow(workflowId: string) {
-    return this.makeProxiedN8nRequest(`/workflows/${workflowId}`, {
-      method: 'DELETE',
-    });
-  }
-
-  async activateWorkflow(workflowId: string) {
-    return this.makeProxiedN8nRequest(`/workflows/${workflowId}/activate`, {
-      method: 'POST',
-    });
-  }
-
-  async deactivateWorkflow(workflowId: string) {
-    return this.makeProxiedN8nRequest(`/workflows/${workflowId}/deactivate`, {
-      method: 'POST',
-    });
-  }
-
-  async executeWorkflow(workflowId: string, data: any = {}) {
-    return this.makeProxiedN8nRequest(`/workflows/${workflowId}/run`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // Execution Management
-  async getExecutions(workflowId?: string, limit: number = 20): Promise<N8nExecution[]> {
-    const params = new URLSearchParams();
-    if (workflowId) params.append('filter', JSON.stringify({ workflowId }));
-    if (limit) params.append('limit', limit.toString());
-    
-    const query = params.toString() ? `?${params.toString()}` : '';
-    const response = await this.makeProxiedN8nRequest(`/executions${query}`);
-    
-    return Array.isArray(response) ? response : response.data || [];
-  }
-
-  async getExecution(executionId: string): Promise<N8nExecution> {
-    return this.makeProxiedN8nRequest(`/executions/${executionId}`);
-  }
-
-  // Utility Methods
-  async getActiveWorkflows() {
-    return this.makeProxiedN8nRequest('/active-workflows');
-  }
-
-  async getCredentials() {
-    return this.makeProxiedN8nRequest('/credentials');
-  }
-
-  async getCredentialTypes() {
-    return this.makeProxiedN8nRequest('/credential-types');
-  }
-
-  async getNodeTypes() {
-    return this.makeProxiedN8nRequest('/node-types');
-  }
-
-  // Health Check
-  async healthCheck() {
+  async getConnections(): Promise<N8nConnection[]> {
     try {
-      await this.makeProxiedN8nRequest('/workflows?limit=1');
-      return { status: 'connected', message: 'n8n instance is reachable' };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('n8n_connections')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
     } catch (error) {
-      return { status: 'error', message: error instanceof Error ? error.message : 'Unknown error' };
+      console.error('Error fetching n8n connections:', error);
+      return [];
+    }
+  }
+
+  async updateConnection(id: string, updates: Partial<N8nConnection>): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      const { error } = await supabase
+        .from('n8n_connections')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      return !error;
+    } catch (error) {
+      console.error('Error updating n8n connection:', error);
+      return false;
+    }
+  }
+
+  async deleteConnection(id: string): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      const { error } = await supabase
+        .from('n8n_connections')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      return !error;
+    } catch (error) {
+      console.error('Error deleting n8n connection:', error);
+      return false;
+    }
+  }
+
+  async getWorkflows(connectionId: string): Promise<N8nWorkflow[]> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      const response = await fetch(`${connection.base_url}/api/v1/workflows`, {
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch workflows');
+      }
+
+      const data = await response.json();
+      return data.data || [];
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
+      return [];
+    }
+  }
+
+  async getWorkflowExecutions(connectionId: string, workflowId: string): Promise<N8nExecution[]> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      const response = await fetch(
+        `${connection.base_url}/api/v1/executions?workflowId=${workflowId}`,
+        {
+          headers: {
+            'X-N8N-API-KEY': connection.api_key,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch executions');
+      }
+
+      const data = await response.json();
+      return data.data || [];
+    } catch (error) {
+      console.error('Error fetching executions:', error);
+      return [];
+    }
+  }
+
+  async createWorkflow(connectionId: string, workflow: any): Promise<N8nWorkflow | null> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      const response = await fetch(`${connection.base_url}/api/v1/workflows`, {
+        method: 'POST',
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(workflow),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create workflow');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating workflow:', error);
+      return null;
+    }
+  }
+
+  async updateWorkflow(connectionId: string, workflowId: string, workflow: any): Promise<N8nWorkflow | null> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}`, {
+        method: 'PUT',
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(workflow),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update workflow');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating workflow:', error);
+      return null;
+    }
+  }
+
+  async executeWorkflow(connectionId: string, workflowId: string): Promise<any> {
+    try {
+      const connections = await this.getConnections();
+      const connection = connections.find(c => c.id === connectionId);
+      
+      if (!connection) {
+        throw new Error('Connection not found');
+      }
+
+      const response = await fetch(`${connection.base_url}/api/v1/workflows/${workflowId}/execute`, {
+        method: 'POST',
+        headers: {
+          'X-N8N-API-KEY': connection.api_key,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to execute workflow');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error executing workflow:', error);
+      throw error;
     }
   }
 }

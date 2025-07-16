@@ -1,313 +1,211 @@
-import { supabase } from '../lib/supabase';
 
-export interface AIWorkflowRequest {
-  message: string;
-  chatHistory?: Array<{ role: string; content: string }>;
-  selectedWorkflow?: any;
-  action: 'generate' | 'analyze' | 'edit' | 'chat';
-  workflowContext?: any;
-  credentials?: { [key: string]: any };
+import { supabase } from "@/integrations/supabase/client";
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
 }
 
-export interface AIStreamResponse {
-  type: 'text' | 'workflow' | 'error' | 'tool_start' | 'tool_input' | 'tool_result';
-  content: string | any;
+export interface WorkflowGenerationRequest {
+  description: string;
+  requirements?: string[];
+  integrations?: string[];
+}
+
+export interface WorkflowGenerationResponse {
+  workflow: any;
+  explanation: string;
+  estimatedComplexity: 'low' | 'medium' | 'high';
 }
 
 class AIService {
-  private validateEnvironment(): void {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    if (!supabaseUrl) {
-      throw new Error('VITE_SUPABASE_URL is not set in environment variables');
+  private apiKey: string | null = null;
+
+  constructor() {
+    // API key will be loaded from environment or user settings
+    this.loadApiKey();
+  }
+
+  private async loadApiKey() {
+    // Try to load from environment first
+    if (import.meta.env.VITE_OPENAI_API_KEY) {
+      this.apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+      return;
     }
-    
-    if (!supabaseKey) {
-      throw new Error('VITE_SUPABASE_ANON_KEY is not set in environment variables');
-    }
-    
-    // Validate URL format
+
+    // Load from user settings if authenticated
     try {
-      new URL(supabaseUrl);
-    } catch {
-      throw new Error(`Invalid VITE_SUPABASE_URL format: ${supabaseUrl}`);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // In a real implementation, you might store API keys in user settings
+        // For now, we'll use a placeholder
+        this.apiKey = null;
+      }
+    } catch (error) {
+      console.warn('Could not load user settings for API key');
     }
   }
 
-  private constructEdgeFunctionUrl(functionName: string): string {
-    this.validateEnvironment();
-    
-    const baseUrl = import.meta.env.VITE_SUPABASE_URL.replace(/\/$/, ''); // Remove trailing slash
-    return `${baseUrl}/functions/v1/${functionName}`;
-  }
-
-  private async getAuthHeaders(): Promise<Record<string, string>> {
-    if (!supabase) throw new Error('Supabase not configured');
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error('Auth error:', error);
-      throw new Error(`Authentication error: ${error.message}`);
+  async generateWorkflow(request: WorkflowGenerationRequest): Promise<WorkflowGenerationResponse> {
+    if (!this.apiKey) {
+      throw new Error('OpenAI API key not configured. Please add your API key in settings.');
     }
-    
-    if (!session) {
-      throw new Error('Not authenticated. Please sign in to use AI features.');
-    }
-    
-    return {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    };
-  }
 
-  private async getBasicHeaders(): Promise<Record<string, string>> {
-    this.validateEnvironment();
-    
-    return {
-      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-    };
-  }
-
-  async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<AIStreamResponse, void, unknown> {
     try {
-      console.log('Starting enhanced AI workflow generation with request:', request);
-      
-      const headers = await this.getAuthHeaders();
-      const url = this.constructEdgeFunctionUrl('ai-workflow-generator');
-      
-      console.log('Calling enhanced AI service at:', url);
-      
-      const response = await fetch(url, {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers,
-        body: JSON.stringify(request),
-      });
-
-      console.log('AI service response status:', response.status);
-      console.log('AI service response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('AI service error response:', errorText);
-        
-        // Check if we got HTML instead of JSON (common error)
-        if (errorText.includes('<!doctype') || errorText.includes('<html')) {
-          throw new Error('AI service returned an HTML error page. The service may not be properly deployed or configured.');
-        }
-        
-        throw new Error(`AI service error: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('text/event-stream')) {
-        const responseText = await response.text();
-        console.error('Expected event stream but got:', contentType, responseText);
-        throw new Error('Invalid response format from AI service. Expected event stream.');
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No response body available');
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          
-          if (done) {
-            console.log('Enhanced AI stream completed');
-            break;
-          }
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                console.log('Received enhanced AI response chunk:', data);
-                yield data as AIStreamResponse;
-              } catch (e) {
-                console.error('Error parsing AI response line:', line, e);
-                // Don't throw here, just log and continue
-              }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an n8n workflow automation expert. Generate detailed n8n workflows based on user requirements. 
+              Return a JSON response with:
+              1. workflow: Complete n8n workflow JSON
+              2. explanation: Clear explanation of what the workflow does
+              3. estimatedComplexity: 'low', 'medium', or 'high'`
+            },
+            {
+              role: 'user',
+              content: `Create an n8n workflow for: ${request.description}
+              ${request.requirements ? `Requirements: ${request.requirements.join(', ')}` : ''}
+              ${request.integrations ? `Integrations needed: ${request.integrations.join(', ')}` : ''}`
             }
-          }
-        }
-      } finally {
-        reader.releaseLock();
-      }
-    } catch (error) {
-      console.error('Enhanced AI service error:', error);
-      yield {
-        type: 'error',
-        content: error instanceof Error ? error.message : 'Unknown error occurred while communicating with AI service'
-      };
-    }
-  }
-
-  async generateWorkflow(request: AIWorkflowRequest): Promise<any> {
-    const responses: string[] = [];
-    let workflowData: any = null;
-
-    for await (const response of this.generateWorkflowStream(request)) {
-      if (response.type === 'text') {
-        responses.push(response.content as string);
-      } else if (response.type === 'workflow') {
-        workflowData = response.content;
-      } else if (response.type === 'error') {
-        throw new Error(response.content as string);
-      }
-    }
-
-    return {
-      content: responses.join(''),
-      workflow: workflowData
-    };
-  }
-
-  // Quick non-streaming method for simple requests
-  async chatWithAI(message: string, chatHistory: Array<{ role: string; content: string }> = []): Promise<string> {
-    const request: AIWorkflowRequest = {
-      message,
-      chatHistory,
-      action: 'chat'
-    };
-
-    const responses: string[] = [];
-
-    for await (const response of this.generateWorkflowStream(request)) {
-      if (response.type === 'text') {
-        responses.push(response.content as string);
-      } else if (response.type === 'error') {
-        throw new Error(response.content as string);
-      }
-    }
-
-    return responses.join('');
-  }
-
-  // Test connection to AI service with better error handling
-  async testConnection(): Promise<boolean> {
-    try {
-      // First validate environment
-      this.validateEnvironment();
-      
-      const url = this.constructEdgeFunctionUrl('ai-workflow-generator');
-      console.log('Testing AI service connection at:', url);
-      
-      let headers: Record<string, string>;
-      
-      try {
-        // Try with auth headers first
-        headers = await this.getAuthHeaders();
-        console.log('Using authenticated headers for test');
-      } catch (authError) {
-        console.log('Auth failed, using basic headers:', authError);
-        // Fall back to basic headers if auth fails
-        headers = await this.getBasicHeaders();
-      }
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          message: 'test',
-          action: 'chat'
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
         }),
       });
 
-      console.log('Test connection response status:', response.status);
-      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Test connection failed with response:', errorText);
-        return false;
+        throw new Error(`OpenAI API error: ${response.statusText}`);
       }
-      
-      return true;
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('No response from AI service');
+      }
+
+      // Try to parse JSON response
+      try {
+        return JSON.parse(content);
+      } catch {
+        // If not JSON, create a structured response
+        return {
+          workflow: {
+            name: "Generated Workflow",
+            nodes: [],
+            connections: {}
+          },
+          explanation: content,
+          estimatedComplexity: 'medium' as const
+        };
+      }
     } catch (error) {
-      console.error('AI service connection test failed:', error);
-      
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        console.error('This is likely a network connectivity issue or the edge function is not deployed');
-      }
-      
-      return false;
+      console.error('Error generating workflow:', error);
+      throw error;
     }
   }
 
-  // Simple connectivity test without authentication
-  async testBasicConnectivity(): Promise<{ success: boolean; error?: string }> {
+  async chat(messages: ChatMessage[]): Promise<ChatMessage> {
+    if (!this.apiKey) {
+      throw new Error('OpenAI API key not configured. Please add your API key in settings.');
+    }
+
     try {
-      this.validateEnvironment();
-      
-      const url = this.constructEdgeFunctionUrl('ai-workflow-generator');
-      console.log('Testing basic connectivity to:', url);
-      
-      const headers = await this.getBasicHeaders();
-      
-      const response = await fetch(url, {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
         body: JSON.stringify({
-          message: 'connectivity-test',
-          action: 'chat'
+          model: 'gpt-4',
+          messages: messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          temperature: 0.7,
+          max_tokens: 1000,
         }),
       });
 
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('No response from AI service');
+      }
+
       return {
-        success: response.ok,
-        error: response.ok ? undefined : `HTTP ${response.status}: ${response.statusText}`
+        role: 'assistant',
+        content,
+        timestamp: new Date()
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Basic connectivity test failed:', errorMessage);
-      
-      return {
-        success: false,
-        error: errorMessage
-      };
+      console.error('Error in chat:', error);
+      throw error;
     }
   }
 
-  // Generate workflow with credentials for testing
-  async generateWorkflowWithCredentials(
-    message: string, 
-    credentials: { [key: string]: any },
-    chatHistory: Array<{ role: string; content: string }> = []
-  ): Promise<any> {
-    const request: AIWorkflowRequest = {
-      message,
-      chatHistory,
-      action: 'generate',
-      credentials
-    };
+  // Save conversation to Supabase
+  async saveConversation(sessionId: string, messages: ChatMessage[]): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    return this.generateWorkflow(request);
+      const { error } = await supabase
+        .from('conversation_memory')
+        .upsert({
+          user_id: user.id,
+          session_id: sessionId,
+          messages: messages,
+          context: {
+            active_workflows: [],
+            user_preferences: {},
+            recent_actions: []
+          }
+        });
+
+      if (error) {
+        console.error('Error saving conversation:', error);
+      }
+    } catch (error) {
+      console.error('Error saving conversation:', error);
+    }
   }
 
-  // Analyze workflow with enhanced capabilities
-  async analyzeWorkflowAdvanced(
-    workflow: any,
-    question: string = "Analyze this workflow comprehensively",
-    credentials?: { [key: string]: any }
-  ): Promise<any> {
-    const request: AIWorkflowRequest = {
-      message: question,
-      selectedWorkflow: workflow,
-      action: 'analyze',
-      credentials
-    };
+  // Load conversation from Supabase
+  async loadConversation(sessionId: string): Promise<ChatMessage[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
 
-    return this.generateWorkflow(request);
+      const { data, error } = await supabase
+        .from('conversation_memory')
+        .select('messages')
+        .eq('user_id', user.id)
+        .eq('session_id', sessionId)
+        .single();
+
+      if (error || !data) return [];
+
+      return data.messages as ChatMessage[];
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      return [];
+    }
   }
 }
 

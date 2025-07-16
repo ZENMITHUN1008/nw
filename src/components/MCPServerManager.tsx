@@ -18,7 +18,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../lib/supabase';
+import { supabase } from "@/integrations/supabase/client";
 
 interface MCPServer {
   id?: string;
@@ -179,36 +179,36 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
   };
 
   const loadMCPServers = async () => {
-  try {
-    console.log('Loading MCP servers for user:', user?.id);
-    
-    if (!user?.id || !supabase) {
-      console.error('No user ID available or Supabase not configured');
-      setServers([]);
-      return;
+    try {
+      console.log('Loading MCP servers for user:', user?.id);
+      
+      if (!user?.id) {
+        console.error('No user ID available');
+        setServers([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('mcp_servers')
+        .select('*')
+        .eq('user_id', user.id);
+
+      console.log('MCP servers query result:', { data, error });
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Loaded MCP servers:', data);
+      setServers(data || []);
+    } catch (error) {
+      console.error('Error loading MCP servers:', error);
+      alert('Failed to load MCP servers. Check console for details.');
+    } finally {
+      setLoading(false);
     }
-
-    const { data, error } = await supabase
-      .from('mcp_servers')
-      .select('*')
-      .eq('user_id', user.id);
-
-    console.log('MCP servers query result:', { data, error });
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
-    }
-    
-    console.log('Loaded MCP servers:', data);
-    setServers(data || []);
-  } catch (error) {
-    console.error('Error loading MCP servers:', error);
-    alert('Failed to load MCP servers. Check console for details.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const validateMCPServerJSON = (jsonString: string): { valid: boolean; data?: any; error?: string } => {
     try {
@@ -746,5 +746,3 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
     </div>
   );
 };
-
-
