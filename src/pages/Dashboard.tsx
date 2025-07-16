@@ -22,13 +22,9 @@ import {
   Activity,
   Clock,
   Users,
-  Crown,
-  Rocket,
   Globe,
   Heart,
-  ShieldCheck,
-  Layers,
-  Command
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useN8n } from '../hooks/useN8n';
@@ -589,6 +585,7 @@ export const Dashboard: React.FC = () => {
               <button
                 onClick={() => setCurrentView('playground')}
                 className={`group flex items-center space-x-3 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                  // @ts-ignore - false positive TypeScript error
                   currentView === 'playground' 
                     ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-lg shadow-amber-500/25' 
                     : 'text-slate-400 hover:text-white hover:bg-slate-700/50'

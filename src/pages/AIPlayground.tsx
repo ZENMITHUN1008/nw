@@ -449,7 +449,7 @@ export const AIPlayground: React.FC<AIPlaygroundProps> = ({ onBack }) => {
         else if (response.type === 'tool_start') {
           const toolActivity: AIActivity = {
             id: `tool-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            type: response.content.tool === 'web_search' ? 'web_search' : 'code_execution',
+            type: response.content.tool === 'web_search' ? 'web_search' : 'analysis',
             status: 'running',
             title: response.content.tool === 'web_search' ? 'Searching Web' : 'Executing Code',
             description: response.content.tool === 'web_search' ? 'Searching for latest information...' : 'Running code execution...',

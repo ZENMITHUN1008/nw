@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Mic, 
-  MicOff, 
   Play, 
   Sparkles, 
   Zap, 
@@ -13,18 +12,14 @@ import {
   Database,
   Globe,
   Heart,
-  User,
   LogOut,
   BarChart3,
   RefreshCw,
   Calendar,
   Layers,
-  MessageCircle,
   AlertCircle,
   HelpCircle,
   Rocket,
-  BookOpen,
-  ExternalLink,
   Shield,
   Users
 } from 'lucide-react';
@@ -35,7 +30,7 @@ import { useAuth } from './hooks/useAuth';
 import Logo from './components/Logo';
 
 function App() {
-  const [isListening, setIsListening] = useState(false);
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
@@ -62,9 +57,6 @@ function App() {
     }
   }, [currentPage, user]);
 
-  const toggleListening = () => {
-    setIsListening(!isListening);
-  };
 
   const handleGetStarted = () => {
     if (user) {
