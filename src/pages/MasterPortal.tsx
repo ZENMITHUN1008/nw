@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -7,12 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Users, Activity, Globe, Zap, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Updated interfaces to match the actual database schema
 interface UserAnalytics {
   id: string;
   user_id: string;
   action_type: string;
-  resource_type: string;
-  resource_id: string;
+  resource_type: string | null;
+  resource_id: string | null;
   metadata: any;
   created_at: string;
 }
@@ -28,10 +28,10 @@ interface SystemLog {
 
 interface ActivityFeed {
   id: string;
-  user_id: string;
+  user_id: string | null;
   activity_type: string;
   title: string;
-  description: string;
+  description: string | null;
   metadata: any;
   created_at: string;
 }
@@ -39,18 +39,30 @@ interface ActivityFeed {
 interface Profile {
   id: string;
   email: string;
-  full_name: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  company: string | null;
+  location: string | null;
+  website: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 interface N8nConnection {
   id: string;
   user_id: string;
+  api_key: string;
+  base_url: string;
   instance_name: string;
   connection_status: string;
-  workflow_count: number;
-  execution_count: number;
+  workflow_count: number | null;
+  execution_count: number | null;
+  is_active: boolean;
+  version: string | null;
+  last_connected: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 const MasterPortal = () => {
@@ -383,7 +395,7 @@ const MasterPortal = () => {
                       <div>
                         <p className="font-medium">{analytic.action_type}</p>
                         <p className="text-sm text-muted-foreground">
-                          {analytic.resource_type && `${analytic.resource_type}: ${analytic.resource_id}`}
+                          {analytic.resource_type && analytic.resource_id && `${analytic.resource_type}: ${analytic.resource_id}`}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(analytic.created_at).toLocaleString()}
