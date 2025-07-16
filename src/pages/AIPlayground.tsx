@@ -76,7 +76,7 @@ export const AIPlayground: React.FC = () => {
 
       const creds: any = {};
       data?.forEach((cred: any) => {
-        creds[cred.instanceName] = cred.id;
+        creds[cred.instance_name] = cred.id;
       });
       setCredentials(creds);
     };
@@ -84,7 +84,7 @@ export const AIPlayground: React.FC = () => {
     fetchCredentials();
   }, [user, toast]);
 
-  const handleCredentialChange = (credentialName: string) => {
+  const handleCredentialChange = (_credentialName: string) => {
     // Handle credential selection
   };
 
@@ -270,7 +270,7 @@ export const AIPlayground: React.FC = () => {
       });
   };
 
-  const generateAIResponse = async (userMessage: string, action = 'generate', workflow: any = null, context: WorkflowContext | null = null) => {
+  const generateAIResponse = async (userMessage: string, action = 'generate', workflow: any = null, context: WorkflowContext = {}) => {
     try {
       setIsLoading(true);
       
@@ -605,7 +605,7 @@ export const AIPlayground: React.FC = () => {
                               type="text"
                               id={`context-${key}`}
                               value={workflowContext[key]}
-                              onChange={(e) => handleContextChange(key, e.target.value)}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleContextChange(key, e.target.value)}
                             />
                           </div>
                         ))}
