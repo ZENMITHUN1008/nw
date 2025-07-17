@@ -1,424 +1,167 @@
 
-import { useState, useEffect } from 'react';
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Switch } from "../components/ui/switch";
-import { useToast } from "../hooks/use-toast";
-import { useUser, useSupabaseClient } from '../hooks/useSupabase'
-import { useN8n } from "../hooks/useN8n";
-import { Activity, Plus, CheckCircle, AlertCircle } from 'lucide-react';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "../components/ui/table"
-import AIPlayground from "./AIPlayground";
-import { N8nWorkflow, N8nConnection } from "../services/n8nService";
-import { WorkflowGrid } from "../components/WorkflowGrid";
-import { WorkflowList } from "../components/WorkflowList";
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Mic, Settings, Plus, Zap, Activity, Clock, Play } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useN8n } from '@/hooks/useN8n';
 
-export default function Dashboard() {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [workflows, setWorkflows] = useState<N8nWorkflow[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
-  const [newWorkflowName, setNewWorkflowName] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
-  const [editedWorkflowName, setEditedWorkflowName] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deletingWorkflowId, setDeletingWorkflowId] = useState<string | null>(null);
-  const [activeConnection, setActiveConnection] = useState<N8nConnection | null>(null);
-  const [showAIPlayground, setShowAIPlayground] = useState(false);
-  const [showConnections, setShowConnections] = useState(false);
-
-  const { 
-    connections, 
-    loadConnections, 
-    activeConnection: activeN8nConnection, 
-    workflows: n8nWorkflows, 
-    loadWorkflows, 
-    createWorkflow,
-    updateWorkflow,
-    deleteWorkflow,
-    activateWorkflow,
-    deactivateWorkflow
-  } = useN8n();
-  const { toast: showToast } = useToast();
-
-  useEffect(() => {
-    if (activeN8nConnection) {
-      setActiveConnection(activeN8nConnection);
-      setWorkflows(n8nWorkflows);
-    } else {
-      setActiveConnection(null);
-      setWorkflows([]);
-    }
-  }, [activeN8nConnection, n8nWorkflows]);
-
-  useEffect(() => {
-    loadConnections();
-  }, [loadConnections]);
-
-  useEffect(() => {
-    if (activeConnection) {
-      loadWorkflows();
-    }
-  }, [activeConnection, loadWorkflows]);
+const Dashboard = () => {
+  const { user } = useAuth();
+  const { createWorkflow, updateWorkflow, workflows, loading } = useN8n();
+  const [isRecording, setIsRecording] = useState(false);
 
   const handleCreateWorkflow = async () => {
-    setIsCreating(true);
     try {
-      const newWorkflow = await createWorkflow('My New Workflow');
-      setWorkflows(prev => [...prev, newWorkflow]);
-      setNewWorkflowName('');
-      showToast({
-        title: "Workflow Created",
-        description: "Your new workflow has been created successfully.",
+      await createWorkflow({
+        name: 'New Workflow',
+        description: 'Created from dashboard',
+        workflow_data: {}
       });
     } catch (error) {
-      console.error("Error creating workflow:", error);
-      showToast({
-        title: "Error",
-        description: "Failed to create workflow.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreating(false);
+      console.error('Failed to create workflow:', error);
     }
   };
 
-  const handleEditWorkflow = (workflowId: string) => {
-    const workflowToEdit = workflows.find(wf => wf.id === workflowId);
-    if (workflowToEdit) {
-      setEditingWorkflowId(workflowId);
-      setEditedWorkflowName(workflowToEdit.name);
-      setIsEditing(true);
-    }
-  };
-
-  const handleUpdateWorkflow = async () => {
-    if (!editingWorkflowId) return;
-    setIsEditing(true);
+  const handleUpdateWorkflow = async (id: string) => {
     try {
-      const updatedWorkflow = await updateWorkflow(editingWorkflowId, editedWorkflowName);
-      setWorkflows(prev =>
-        prev.map(wf => (wf.id === editingWorkflowId ? updatedWorkflow : wf))
-      );
-      setEditingWorkflowId(null);
-      setEditedWorkflowName('');
-      showToast({
-        title: "Workflow Updated",
-        description: "Your workflow has been updated successfully.",
+      await updateWorkflow(id, {
+        name: 'Updated Workflow',
+        description: 'Updated from dashboard'
       });
     } catch (error) {
-      console.error("Error updating workflow:", error);
-      showToast({
-        title: "Error",
-        description: "Failed to update workflow.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsEditing(false);
+      console.error('Failed to update workflow:', error);
     }
   };
 
-  const handleDeleteWorkflow = (workflowId: string) => {
-    setDeletingWorkflowId(workflowId);
-    setIsDeleting(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deletingWorkflowId) return;
-    setIsDeleting(true);
-    try {
-      await deleteWorkflow();
-      setWorkflows(prev => prev.filter(wf => wf.id !== deletingWorkflowId));
-      setDeletingWorkflowId(null);
-      showToast({
-        title: "Workflow Deleted",
-        description: "Your workflow has been deleted successfully.",
-      });
-    } catch (error) {
-      console.error("Error deleting workflow:", error);
-      showToast({
-        title: "Error",
-        description: "Failed to delete workflow.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
+  const quickActions = [
+    {
+      title: 'Voice Command',
+      description: 'Create workflows with voice',
+      icon: Mic,
+      action: () => setIsRecording(true),
+      color: 'bg-emerald-500'
+    },
+    {
+      title: 'New Workflow',
+      description: 'Start from scratch',
+      icon: Plus,
+      action: handleCreateWorkflow,
+      color: 'bg-blue-500'
+    },
+    {
+      title: 'AI Playground',
+      description: 'Experiment with AI',
+      icon: Zap,
+      action: () => {},
+      color: 'bg-purple-500'
     }
-  };
+  ];
 
-  const handleCancelDelete = () => {
-    setDeletingWorkflowId(null);
-    setIsDeleting(false);
-  };
-
-  const handleAction = async (workflowId: string, action: 'activate' | 'deactivate' | 'delete' | 'edit' | 'view') => {
-    try {
-      switch (action) {
-        case 'activate':
-          await activateWorkflow();
-          setWorkflows(prev =>
-            prev.map(wf => (wf.id === workflowId ? { ...wf, active: true } : wf))
-          );
-          showToast({
-            title: "Workflow Activated",
-            description: "Your workflow has been activated.",
-          });
-          break;
-        case 'deactivate':
-          await deactivateWorkflow();
-          setWorkflows(prev =>
-            prev.map(wf => (wf.id === workflowId ? { ...wf, active: false } : wf))
-          );
-          showToast({
-            title: "Workflow Deactivated",
-            description: "Your workflow has been deactivated.",
-          });
-          break;
-        case 'delete':
-          handleDeleteWorkflow(workflowId);
-          break;
-        case 'edit':
-          handleEditWorkflow(workflowId);
-          break;
-        case 'view':
-          // Handle view action
-          break;
-        default:
-          console.warn(`Unhandled action: ${action}`);
-      }
-    } catch (error) {
-      console.error(`Error performing action ${action}:`, error);
-      showToast({
-        title: "Error",
-        description: `Failed to ${action} workflow.`,
-        variant: "destructive",
-      });
-    }
-  };
+  const stats = [
+    { label: 'Active Workflows', value: workflows?.length || 0, icon: Activity },
+    { label: 'This Month', value: '12', icon: Clock },
+    { label: 'Success Rate', value: '98%', icon: Play }
+  ];
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">n8n Workflows</h1>
-
-      <div className="flex items-center justify-between mb-4">
-        <Button onClick={() => setShowAIPlayground(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Create with AI
-        </Button>
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="view-mode">View Mode:</Label>
-          <Switch 
-            id="view-mode" 
-            checked={viewMode === 'list'} 
-            onCheckedChange={(checked: boolean) => setViewMode(checked ? 'list' : 'grid')} 
-          />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+            <p className="text-slate-400">Welcome back, {user?.email}</p>
+          </div>
+          <Button variant="outline" size="icon">
+            <Settings className="w-4 h-4" />
+          </Button>
         </div>
-      </div>
 
-      {activeConnection ? (
-        <div className="text-green-500 mb-2">
-          Connected to n8n instance: {activeConnection.base_url}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {stats.map((stat, index) => (
+            <Card key={index} className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm">{stat.label}</p>
+                    <p className="text-2xl font-bold text-white">{stat.value}</p>
+                  </div>
+                  <stat.icon className="w-8 h-8 text-indigo-400" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      ) : (
-        <div className="text-red-500 mb-2">
-          Not connected to n8n instance
-        </div>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <Card>
+        {/* Quick Actions */}
+        <Card className="bg-slate-800/50 border-slate-700 mb-8">
           <CardHeader>
-            <CardTitle>Add New Workflow</CardTitle>
-            <CardDescription>Create a new n8n workflow.</CardDescription>
+            <CardTitle className="text-white">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="workflow-name">Workflow Name</Label>
-                <Input
-                  id="workflow-name"
-                  placeholder="My New Workflow"
-                  value={newWorkflowName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewWorkflowName(e.target.value)}
-                />
-              </div>
-              <Button onClick={handleCreateWorkflow} disabled={isCreating}>
-                {isCreating ? (
-                  <>
-                    Creating...
-                    <Activity className="w-4 h-4 ml-2 animate-spin" />
-                  </>
-                ) : (
-                  <>
-                    Create Workflow
-                    <Plus className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </Button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {quickActions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={action.action}
+                  className="p-6 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors text-left group"
+                >
+                  <div className={`w-12 h-12 rounded-lg ${action.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                    <action.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="font-semibold text-white mb-2">{action.title}</h3>
+                  <p className="text-slate-400 text-sm">{action.description}</p>
+                </button>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Recent Workflows */}
+        <Card className="bg-slate-800/50 border-slate-700">
           <CardHeader>
-            <CardTitle>Manage Connections</CardTitle>
-            <CardDescription>View and manage your n8n connections.</CardDescription>
+            <CardTitle className="text-white">Recent Workflows</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => setShowConnections(!showConnections)}>
-              {showConnections ? "Hide Connections" : "Show Connections"}
-            </Button>
-
-            {showConnections && (
-              <div className="mt-4">
-                {connections.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Instance Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {connections.map((connection: N8nConnection) => (
-                        <TableRow key={connection.id}>
-                          <TableCell>
-                            <div className="font-medium">{connection.instance_name}</div>
-                            <div className="text-sm text-gray-600">
-                              Instance: {connection.instance_name}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {connection.connection_status === 'connected' ? (
-                              <div className="flex items-center">
-                                <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                                <span className="text-green-500">Connected</span>
-                                <div className="text-sm text-gray-600">
-                                  Connected: {connection.instance_name}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center">
-                                <AlertCircle className="w-4 h-4 text-red-500 mr-1" />
-                                <span className="text-red-500">Not Connected</span>
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="secondary" size="sm">
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-gray-500">No connections found.</div>
-                )}
+            {loading ? (
+              <div className="text-slate-400">Loading workflows...</div>
+            ) : workflows && workflows.length > 0 ? (
+              <div className="space-y-4">
+                {workflows.slice(0, 5).map((workflow: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-white">{workflow.name}</h4>
+                      <p className="text-slate-400 text-sm">{workflow.description}</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleUpdateWorkflow(workflow.id)}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-slate-400">No workflows yet. Create your first one!</p>
+                <Button 
+                  onClick={handleCreateWorkflow}
+                  className="mt-4"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Workflow
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-
-      {isEditing && editingWorkflowId && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Edit Workflow</CardTitle>
-            <CardDescription>Edit the name of the workflow.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-workflow-name">Workflow Name</Label>
-                <Input
-                  id="edit-workflow-name"
-                  placeholder="Updated Workflow Name"
-                  value={editedWorkflowName}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditedWorkflowName(e.target.value)}
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="ghost" onClick={() => setIsEditing(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleUpdateWorkflow} disabled={isEditing}>
-                  {isEditing ? (
-                    <>
-                      Updating...
-                      <Activity className="w-4 h-4 ml-2 animate-spin" />
-                    </>
-                  ) : (
-                    "Update Workflow"
-                  )}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {isDeleting && deletingWorkflowId && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Delete Workflow</CardTitle>
-            <CardDescription>Are you sure you want to delete this workflow?</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-end space-x-2">
-              <Button variant="ghost" onClick={handleCancelDelete}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
-                {isDeleting ? (
-                  <>
-                    Deleting...
-                    <Activity className="w-4 h-4 ml-2 animate-spin" />
-                  </>
-                ) : (
-                  "Delete Workflow"
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {viewMode === 'grid' ? (
-        <WorkflowGrid 
-          workflows={workflows} 
-          onAction={handleAction}
-          baseUrl={activeConnection?.base_url || ''}
-        />
-      ) : (
-        <WorkflowList 
-          workflows={workflows} 
-          onAction={handleAction}
-          baseUrl={activeConnection?.base_url || ''}
-        />
-      )}
-
-      {showAIPlayground && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
-          <div className="container mx-auto p-4 max-w-5xl h-screen overflow-y-auto">
-            <Button variant="ghost" className="absolute top-4 right-4" onClick={() => setShowAIPlayground(false)}>
-              Close AI Playground
-            </Button>
-            <AIPlayground />
-          </div>
-        </div>
-      )}
     </div>
   );
-}
+};
+
+export default Dashboard;
