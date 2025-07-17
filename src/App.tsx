@@ -11,7 +11,7 @@ import FeaturesSection from './components/FeaturesSection';
 import UseCasesSection from './UseCasesSection';
 import TechStackSection from './TechStackSection';
 import VoiceDemoSection from './VoiceDemoSection';
-import { CTASection } from './components/CTASection';
+import CTASection from './components/CTASection';
 import Footer from './Footer';
 import { useUser } from './hooks/useSupabase';
 import { useAuth } from './hooks/useAuth';
