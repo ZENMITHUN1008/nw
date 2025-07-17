@@ -1,6 +1,5 @@
 
 import { supabase } from "../integrations/supabase/client";
-import { n8nService } from "./n8nService";
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -18,7 +17,6 @@ export interface WorkflowGenerationResponse {
   workflow: any;
   explanation: string;
   estimatedComplexity: 'low' | 'medium' | 'high';
-  deploymentResult?: any;
 }
 
 export interface AIWorkflowRequest {
@@ -30,11 +28,10 @@ export interface AIWorkflowRequest {
   selectedWorkflow?: any;
   action?: 'generate' | 'analyze' | 'edit' | 'chat';
   workflowContext?: any;
-  autoDeployToN8n?: boolean;
 }
 
 export interface StreamChunk {
-  type: 'text' | 'workflow' | 'error' | 'complete' | 'deployment' | 'tool_start' | 'tool_input' | 'tool_result';
+  type: 'text' | 'workflow' | 'error' | 'complete' | 'tool_start' | 'tool_input' | 'tool_result';
   content: string | any;
 }
 
@@ -57,8 +54,6 @@ class AIService {
 
   async generateWorkflow(request: WorkflowGenerationRequest): Promise<WorkflowGenerationResponse> {
     try {
-      console.log('Calling workflow-generator function with:', request);
-      
       const response = await supabase.functions.invoke('workflow-generator', {
         body: {
           message: request.description,
@@ -68,43 +63,18 @@ class AIService {
         }
       });
 
-      console.log('AI service response:', response);
-
       if (response.error) {
-        console.error('AI service error:', response.error);
-        throw new Error(`AI service error: ${response.error.message || 'Unknown error'}`);
-      }
-
-      if (!response.data) {
-        throw new Error('No data received from AI service');
-      }
-
-      const workflow = response.data.workflow || {
-        name: "Generated Workflow",
-        nodes: [],
-        connections: {}
-      };
-
-      let deploymentResult = null;
-      
-      // Auto-deploy to n8n if workflow was generated successfully
-      if (workflow && workflow.nodes && workflow.nodes.length > 0) {
-        try {
-          console.log('Auto-deploying workflow to n8n...');
-          deploymentResult = await n8nService.createWorkflow(workflow);
-          console.log('Workflow deployed successfully:', deploymentResult);
-        } catch (deployError) {
-          console.error('Failed to deploy workflow to n8n:', deployError);
-          const errorMessage = deployError instanceof Error ? deployError.message : String(deployError);
-          deploymentResult = { error: errorMessage };
-        }
+        throw new Error(`AI service error: ${response.error.message}`);
       }
 
       return {
-        workflow,
-        explanation: response.data.explanation || 'Workflow generated successfully',
-        estimatedComplexity: response.data.estimatedComplexity || 'medium',
-        deploymentResult
+        workflow: response.data?.workflow || {
+          name: "Generated Workflow",
+          nodes: [],
+          connections: {}
+        },
+        explanation: response.data?.explanation || 'Workflow generated successfully',
+        estimatedComplexity: response.data?.estimatedComplexity || 'medium'
       };
     } catch (error) {
       console.error('Error generating workflow:', error);
@@ -114,8 +84,6 @@ class AIService {
 
   async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<StreamChunk, void, unknown> {
     try {
-      console.log('Starting workflow stream generation with:', request);
-      
       // Use supabase.functions.invoke for proper authentication
       const response = await supabase.functions.invoke('workflow-generator', {
         body: {
@@ -127,39 +95,20 @@ class AIService {
         }
       });
 
-      console.log('Stream response:', response);
-
       if (response.error) {
-        console.error('AI service error:', response.error);
-        throw new Error(`AI service error: ${response.error.message || 'Unknown error'}`);
+        throw new Error(`AI service error: ${response.error.message}`);
       }
 
       // Since we're not getting a stream from supabase.functions.invoke,
       // we'll yield the complete response
       if (response.data) {
+        if (response.data.workflow) {
+          yield { type: 'workflow', content: response.data.workflow };
+        }
+        
         if (response.data.content || response.data.explanation) {
           yield { type: 'text', content: response.data.content || response.data.explanation };
         }
-        
-        if (response.data.workflow) {
-          yield { type: 'workflow', content: response.data.workflow };
-          
-          // Auto-deploy to n8n if enabled and workflow is valid
-          if (request.autoDeployToN8n !== false && response.data.workflow.nodes && response.data.workflow.nodes.length > 0) {
-            try {
-              yield { type: 'deployment', content: 'Deploying workflow to n8n...' };
-              const deploymentResult = await n8nService.createWorkflow(response.data.workflow);
-              yield { type: 'deployment', content: `✅ Workflow deployed successfully to n8n! ID: ${deploymentResult.id}` };
-            } catch (deployError) {
-              console.error('Failed to deploy workflow to n8n:', deployError);
-              const errorMessage = deployError instanceof Error ? deployError.message : String(deployError);
-              yield { type: 'deployment', content: `❌ Failed to deploy to n8n: ${errorMessage}` };
-            }
-          }
-        }
-      } else {
-        // Fallback response if no data
-        yield { type: 'text', content: 'I apologize, but I couldn\'t generate a response. Please try again.' };
       }
 
       yield { type: 'complete', content: '' };
@@ -173,8 +122,6 @@ class AIService {
 
   async chat(messages: ChatMessage[]): Promise<ChatMessage> {
     try {
-      console.log('Chat request with messages:', messages);
-      
       const response = await supabase.functions.invoke('workflow-generator', {
         body: {
           message: messages[messages.length - 1]?.content || '',
@@ -183,32 +130,17 @@ class AIService {
         }
       });
 
-      console.log('Chat response:', response);
-
       if (response.error) {
-        console.error('AI service error:', response.error);
-        throw new Error(`AI service error: ${response.error.message || 'Unknown error'}`);
+        throw new Error(`AI service error: ${response.error.message}`);
       }
 
       return {
         role: 'assistant',
-        content: response.data?.content || response.data?.explanation || 'I apologize, but I couldn\'t generate a response.',
+        content: response.data?.content || 'I apologize, but I couldn\'t generate a response.',
         timestamp: new Date()
       };
     } catch (error) {
       console.error('Error in chat:', error);
-      throw error;
-    }
-  }
-
-  async deployWorkflowToN8n(workflow: any): Promise<any> {
-    try {
-      console.log('Deploying workflow to n8n:', workflow.name);
-      const result = await n8nService.createWorkflow(workflow);
-      console.log('Deployment successful:', result);
-      return result;
-    } catch (error) {
-      console.error('Deployment failed:', error);
       throw error;
     }
   }
