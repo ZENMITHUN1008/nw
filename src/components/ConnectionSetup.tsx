@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -73,7 +74,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     loadConnections 
   } = useN8n();
   
-  const [formData, setFormData({
+  const [formData, setFormData] = useState({
     instanceName: '',
     baseUrl: '',
     apiKey: ''
