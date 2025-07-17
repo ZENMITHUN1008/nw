@@ -55,7 +55,7 @@ export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction,
                 <DropdownMenuTrigger>
                   <MoreVertical className="w-4 h-4" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent>
                   <DropdownMenuItem onClick={() => onAction(workflow.id, 'view')}>
                     <Eye className="w-4 h-4 mr-2" />
                     View

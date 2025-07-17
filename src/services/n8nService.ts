@@ -9,10 +9,12 @@ export interface N8nConnection {
   api_key: string;
   workflow_count: number | null;
   version: string | null;
-  connection_status: 'connected' | 'disconnected' | 'error';
+  connection_status: string; // Changed to string to match database
   is_active: boolean;
   created_at: string;
   last_connected: string | null;
+  updated_at: string;
+  execution_count: number | null;
 }
 
 export interface N8nWorkflow {
@@ -93,7 +95,7 @@ class N8nService {
         api_key: apiKey,
         workflow_count: workflowCount || 0,
         version: version || null,
-        connection_status: 'connected' as const,
+        connection_status: 'connected',
         is_active: true,
         last_connected: new Date().toISOString()
       };
@@ -161,24 +163,24 @@ class N8nService {
     };
   }
 
-  async deleteWorkflow(workflowId: string): Promise<void> {
+  async deleteWorkflow(): Promise<void> {
     // Mock implementation
-    console.log('Deleting workflow:', workflowId);
+    console.log('Deleting workflow');
   }
 
-  async activateWorkflow(workflowId: string): Promise<void> {
+  async activateWorkflow(): Promise<void> {
     // Mock implementation
-    console.log('Activating workflow:', workflowId);
+    console.log('Activating workflow');
   }
 
-  async deactivateWorkflow(workflowId: string): Promise<void> {
+  async deactivateWorkflow(): Promise<void> {
     // Mock implementation
-    console.log('Deactivating workflow:', workflowId);
+    console.log('Deactivating workflow');
   }
 
-  async executeWorkflow(workflowId: string, data: any = {}): Promise<N8nExecution> {
+  async executeWorkflow(): Promise<N8nExecution> {
     // Mock implementation
-    console.log('Executing workflow:', workflowId, data);
+    console.log('Executing workflow');
     return {
       id: '1',
       workflowId: '1',
@@ -193,9 +195,9 @@ class N8nService {
     };
   }
 
-  async getExecutions(workflowId?: string, limit: number = 20): Promise<N8nExecution[]> {
+  async getExecutions(): Promise<N8nExecution[]> {
     // Mock implementation
-    console.log('Getting executions:', workflowId, limit);
+    console.log('Getting executions');
     return [];
   }
 

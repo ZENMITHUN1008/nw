@@ -38,7 +38,7 @@ export const useN8n = () => {
     }
   }, []);
 
-  const testConnection = useCallback(async (baseUrl: string, apiKey: string) => {
+  const testConnection = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -140,11 +140,11 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const deleteWorkflow = useCallback(async (workflowId: string) => {
+  const deleteWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      await n8nService.deleteWorkflow(workflowId);
+      await n8nService.deleteWorkflow();
       await loadWorkflows(); // Reload workflows
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete workflow';
@@ -155,11 +155,11 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const activateWorkflow = useCallback(async (workflowId: string) => {
+  const activateWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      await n8nService.activateWorkflow(workflowId);
+      await n8nService.activateWorkflow();
       await loadWorkflows(); // Reload workflows
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to activate workflow';
@@ -170,11 +170,11 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const deactivateWorkflow = useCallback(async (workflowId: string) => {
+  const deactivateWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      await n8nService.deactivateWorkflow(workflowId);
+      await n8nService.deactivateWorkflow();
       await loadWorkflows(); // Reload workflows
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to deactivate workflow';
@@ -185,11 +185,11 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const executeWorkflow = useCallback(async (workflowId: string, data: any = {}) => {
+  const executeWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const execution = await n8nService.executeWorkflow(workflowId, data);
+      const execution = await n8nService.executeWorkflow();
       return execution;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to execute workflow';
@@ -200,11 +200,11 @@ export const useN8n = () => {
     }
   }, []);
 
-  const loadExecutions = useCallback(async (workflowId?: string, limit: number = 20) => {
+  const loadExecutions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const executionData = await n8nService.getExecutions(workflowId, limit);
+      const executionData = await n8nService.getExecutions();
       setExecutions(executionData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load executions');
@@ -221,7 +221,7 @@ export const useN8n = () => {
     }
   }, []);
 
-  const deployWorkflow = useCallback(async (workflow: any) => {
+  const deployWorkflow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);

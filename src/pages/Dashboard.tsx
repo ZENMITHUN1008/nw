@@ -136,7 +136,7 @@ export default function Dashboard() {
     if (!deletingWorkflowId) return;
     setIsDeleting(true);
     try {
-      await deleteWorkflow(deletingWorkflowId);
+      await deleteWorkflow();
       setWorkflows(prev => prev.filter(wf => wf.id !== deletingWorkflowId));
       setDeletingWorkflowId(null);
       showToast({
@@ -164,7 +164,7 @@ export default function Dashboard() {
     try {
       switch (action) {
         case 'activate':
-          await activateWorkflow(workflowId);
+          await activateWorkflow();
           setWorkflows(prev =>
             prev.map(wf => (wf.id === workflowId ? { ...wf, active: true } : wf))
           );
@@ -174,7 +174,7 @@ export default function Dashboard() {
           });
           break;
         case 'deactivate':
-          await deactivateWorkflow(workflowId);
+          await deactivateWorkflow();
           setWorkflows(prev =>
             prev.map(wf => (wf.id === workflowId ? { ...wf, active: false } : wf))
           );
