@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -125,12 +124,12 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
 
     setStep('testing');
     try {
-      const result = await testConnection(formData.baseUrl, formData.apiKey, formData.instanceName);
+      const result = await testConnection();
       setTestResult(result);
       
       if (result.success) {
-        // Auto-save after successful test
-        await saveConnection();
+        // Auto-save after successful test with correct arguments
+        await saveConnection(formData.baseUrl, formData.apiKey, formData.instanceName, result.data?.workflowCount, result.data?.version);
         setStep('success');
         setTimeout(() => {
           onSuccess();

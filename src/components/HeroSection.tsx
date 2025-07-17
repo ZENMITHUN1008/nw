@@ -7,10 +7,14 @@ import Logo from './Logo';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
+  onOpenMCPManager?: () => void;
+  onOpenProfile?: () => void;
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ 
-  onGetStarted
+  onGetStarted,
+  onOpenMCPManager,
+  onOpenProfile
 }) => {
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);

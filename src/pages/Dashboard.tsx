@@ -1,15 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Mic, Settings, Plus, Zap, Activity, Clock, Play } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { useN8n } from '@/hooks/useN8n';
+import { useAuth } from '../hooks/useAuth';
+import { useN8n } from '../hooks/useN8n';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { createWorkflow, updateWorkflow, workflows, loading } = useN8n();
-  const [isRecording, setIsRecording] = useState(false);
 
   const handleCreateWorkflow = async () => {
     try {
@@ -39,7 +38,7 @@ const Dashboard = () => {
       title: 'Voice Command',
       description: 'Create workflows with voice',
       icon: Mic,
-      action: () => setIsRecording(true),
+      action: () => {},
       color: 'bg-emerald-500'
     },
     {
