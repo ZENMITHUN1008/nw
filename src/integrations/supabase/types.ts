@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_feed: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       conversation_memory: {
         Row: {
           context: Json
@@ -167,6 +197,63 @@ export type Database = {
           location?: string | null
           updated_at?: string
           website?: string | null
+        }
+        Relationships: []
+      }
+      system_logs: {
+        Row: {
+          component: string
+          created_at: string
+          id: string
+          log_level: string
+          message: string
+          metadata: Json | null
+        }
+        Insert: {
+          component: string
+          created_at?: string
+          id?: string
+          log_level?: string
+          message: string
+          metadata?: Json | null
+        }
+        Update: {
+          component?: string
+          created_at?: string
+          id?: string
+          log_level?: string
+          message?: string
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      user_analytics: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_id?: string
         }
         Relationships: []
       }

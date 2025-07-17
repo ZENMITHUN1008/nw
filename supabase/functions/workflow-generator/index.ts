@@ -400,7 +400,15 @@ function extractWorkflowFromContent(content) {
       console.log('Found', jsonMatches.length, 'JSON code blocks');
       
       for (const match of jsonMatches) {
-        const jsonStr = match.replace(/```json\s*/, '').replace(/\s*```$/, '').trim();
+        let jsonStr = match.replace(/```json\s*/, '').replace(/\s*```$/, '').trim();
+        
+        // Remove JavaScript-style comments from JSON
+        jsonStr = jsonStr.replace(/\/\/.*$/gm, ''); // Remove single-line comments
+        jsonStr = jsonStr.replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
+        
+        // Clean up trailing commas and extra whitespace
+        jsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
+        jsonStr = jsonStr.replace(/\s+/g, ' ').trim(); // Normalize whitespace
         
         try {
           const parsed = JSON.parse(jsonStr);
@@ -412,6 +420,7 @@ function extractWorkflowFromContent(content) {
           }
         } catch (e) {
           console.error('Error parsing JSON block:', e);
+          console.log('Problematic JSON string:', jsonStr.substring(0, 500) + '...');
         }
       }
     }
