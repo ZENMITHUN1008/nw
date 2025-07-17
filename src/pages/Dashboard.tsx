@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react'
 import { useN8n } from "@/hooks/useN8n";
@@ -18,7 +19,7 @@ import {
   TableCell,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge";
-import AIPlayground from "./AIPlayground";  // Fix the import
+import AIPlayground from "./AIPlayground";
 import { N8nWorkflow, N8nConnection } from "@/services/n8nService";
 import { WorkflowGrid } from "@/components/WorkflowGrid";
 import { WorkflowList } from "@/components/WorkflowList";
@@ -53,7 +54,7 @@ export default function Dashboard() {
     activateWorkflow,
     deactivateWorkflow
   } = useN8n();
-  const { toast } = useToast();
+  const { toast: showToast } = useToast();
 
   useEffect(() => {
     if (activeN8nConnection) {
@@ -81,13 +82,13 @@ export default function Dashboard() {
       const newWorkflow = await createWorkflow({ name: newWorkflowName, nodes: [] });
       setWorkflows(prev => [...prev, newWorkflow]);
       setNewWorkflowName('');
-      toast({
+      showToast({
         title: "Workflow Created",
         description: "Your new workflow has been created successfully.",
       });
     } catch (error) {
       console.error("Error creating workflow:", error);
-      toast({
+      showToast({
         title: "Error",
         description: "Failed to create workflow.",
         variant: "destructive",
@@ -116,13 +117,13 @@ export default function Dashboard() {
       );
       setEditingWorkflowId(null);
       setEditedWorkflowName('');
-      toast({
+      showToast({
         title: "Workflow Updated",
         description: "Your workflow has been updated successfully.",
       });
     } catch (error) {
       console.error("Error updating workflow:", error);
-      toast({
+      showToast({
         title: "Error",
         description: "Failed to update workflow.",
         variant: "destructive",
@@ -144,13 +145,13 @@ export default function Dashboard() {
       await deleteWorkflow(deletingWorkflowId);
       setWorkflows(prev => prev.filter(wf => wf.id !== deletingWorkflowId));
       setDeletingWorkflowId(null);
-      toast({
+      showToast({
         title: "Workflow Deleted",
         description: "Your workflow has been deleted successfully.",
       });
     } catch (error) {
       console.error("Error deleting workflow:", error);
-      toast({
+      showToast({
         title: "Error",
         description: "Failed to delete workflow.",
         variant: "destructive",
@@ -173,7 +174,7 @@ export default function Dashboard() {
           setWorkflows(prev =>
             prev.map(wf => (wf.id === workflowId ? { ...wf, active: true } : wf))
           );
-          toast({
+          showToast({
             title: "Workflow Activated",
             description: "Your workflow has been activated.",
           });
@@ -183,7 +184,7 @@ export default function Dashboard() {
           setWorkflows(prev =>
             prev.map(wf => (wf.id === workflowId ? { ...wf, active: false } : wf))
           );
-          toast({
+          showToast({
             title: "Workflow Deactivated",
             description: "Your workflow has been deactivated.",
           });
@@ -204,7 +205,7 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error(`Error performing action ${action}:`, error);
-      toast({
+      showToast({
         title: "Error",
         description: `Failed to ${action} workflow.`,
         variant: "destructive",
@@ -234,11 +235,11 @@ export default function Dashboard() {
 
       {activeConnection ? (
         <div className="text-green-500 mb-2">
-          Connected to n8n instance: {activeConnection.base_url}  {/* Fix property name */}
+          Connected to n8n instance: {activeConnection.base_url}
         </div>
       ) : (
         <div className="text-red-500 mb-2">
-          Not connected to n8n instance: {activeConnection?.base_url}  {/* Fix property name */}
+          Not connected to n8n instance: {activeConnection?.base_url}
         </div>
       )}
 
@@ -303,7 +304,7 @@ export default function Dashboard() {
                           <TableCell>
                             <div className="font-medium">{connection.instance_name}</div>
                             <div className="text-sm text-gray-600">
-                              Instance: {connection.instance_name}  {/* Fix property name */}
+                              Instance: {connection.instance_name}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -312,7 +313,7 @@ export default function Dashboard() {
                                 <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
                                 <span className="text-green-500">Connected</span>
                                 <div className="text-sm text-gray-600">
-                                  Connected: {connection.instance_name}  {/* Fix property name */}
+                                  Connected: {connection.instance_name}
                                 </div>
                               </div>
                             ) : (
@@ -407,13 +408,13 @@ export default function Dashboard() {
         <WorkflowGrid 
           workflows={workflowsWithoutTags} 
           onAction={handleAction}
-          baseUrl={activeConnection?.base_url}  {/* Fix property name */}
+          baseUrl={activeConnection?.base_url || ''}
         />
       ) : (
         <WorkflowList 
           workflows={workflowsWithoutTags} 
           onAction={handleAction}
-          baseUrl={activeConnection?.base_url}  {/* Fix property name */}
+          baseUrl={activeConnection?.base_url || ''}
         />
       )}
 
