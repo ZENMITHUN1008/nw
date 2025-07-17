@@ -70,6 +70,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     saveConnection, 
     deleteConnection, 
     loading, 
+    
     loadConnections 
   } = useN8n();
   
@@ -124,12 +125,18 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
 
     setStep('testing');
     try {
-      const result = await testConnection();
+      const result = await testConnection(formData.baseUrl, formData.apiKey, formData.instanceName);
       setTestResult(result);
       
       if (result.success) {
-        // Auto-save after successful test with correct arguments
-        await saveConnection(formData.baseUrl, formData.apiKey, formData.instanceName, result.data?.workflowCount, result.data?.version);
+        // Auto-save after successful test
+        await saveConnection(
+          formData.baseUrl, 
+          formData.apiKey, 
+          formData.instanceName,
+          result.data?.workflowCount,
+          result.data?.version
+        );
         setStep('success');
         setTimeout(() => {
           onSuccess();
@@ -164,8 +171,8 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
   const handleEditConnection = () => {
     if (activeConnection) {
       setFormData({
-        instanceName: activeConnection.instance_name,
-        baseUrl: activeConnection.base_url,
+        instanceName: activeConnection.name,
+        baseUrl: activeConnection.baseUrl,
         apiKey: '' // Don't pre-fill API key for security
       });
     }
@@ -187,10 +194,10 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     switch (status) {
       case 'connected':
         return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
-      case 'disconnected':
-        return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
-      default:
+      case 'error':
         return 'text-red-500 bg-red-500/10 border-red-500/20';
+      default:
+        return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
     }
   };
 
@@ -295,23 +302,23 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
                       <Zap className="w-6 h-6 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-lg font-semibold text-slate-50 truncate">{activeConnection.instance_name}</h3>
-                      <p className="text-sm text-slate-400 truncate">{activeConnection.base_url}</p>
+                      <h3 className="text-lg font-semibold text-slate-50 truncate">{activeConnection.name}</h3>
+                      <p className="text-sm text-slate-400 truncate">{activeConnection.baseUrl}</p>
                     </div>
                   </div>
                   
-                  <div className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center space-x-2 flex-shrink-0 ${getStatusColor(activeConnection.connection_status || 'disconnected')}`}>
-                    {activeConnection.connection_status === 'connected' && <CheckCircle className="w-4 h-4" />}
-                    {activeConnection.connection_status === 'error' && <AlertCircle className="w-4 h-4" />}
-                    {activeConnection.connection_status === 'disconnected' && <Wifi className="w-4 h-4" />}
-                    <span className="capitalize">{activeConnection.connection_status || 'Unknown'}</span>
+                  <div className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center space-x-2 flex-shrink-0 ${getStatusColor(activeConnection.status || 'disconnected')}`}>
+                    {activeConnection.status === 'connected' && <CheckCircle className="w-4 h-4" />}
+                    {activeConnection.status === 'error' && <AlertCircle className="w-4 h-4" />}
+                    {activeConnection.status === 'disconnected' && <Wifi className="w-4 h-4" />}
+                    <span className="capitalize">{activeConnection.status || 'Unknown'}</span>
                   </div>
                 </div>
 
                 {/* Connection Details Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="text-center p-4 bg-slate-800/50 rounded-lg">
-                    <div className="text-2xl font-bold text-slate-50 mb-1">{activeConnection.workflow_count || 0}</div>
+                    <div className="text-2xl font-bold text-slate-50 mb-1">{activeConnection.workflowCount || 0}</div>
                     <div className="text-sm text-slate-400 flex items-center justify-center space-x-1">
                       <Activity className="w-3 h-3" />
                       <span>Workflows</span>
@@ -329,7 +336,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
                   <div className="text-center p-4 bg-slate-800/50 rounded-lg">
                     <div className="flex items-center justify-center text-slate-50 mb-1">
                       <Calendar className="w-4 h-4 mr-1" />
-                      <span className="text-sm font-medium">{formatDate(activeConnection.created_at).split(',')[0]}</span>
+                      <span className="text-sm font-medium">{formatDate(activeConnection.createdAt?.toISOString()).split(',')[0]}</span>
                     </div>
                     <div className="text-sm text-slate-400">Connected</div>
                   </div>
@@ -344,14 +351,14 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
                 </div>
 
                 {/* Last Connected Info */}
-                {activeConnection.last_connected && (
+                {activeConnection.lastConnected && (
                   <div className="mt-6 pt-4 border-t border-slate-700/50">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm">
                       <div className="flex items-center space-x-2 text-slate-400">
                         <Clock className="w-4 h-4" />
                         <span>Last connected:</span>
                       </div>
-                      <span className="text-slate-300 font-medium">{formatDate(activeConnection.last_connected)}</span>
+                      <span className="text-slate-300 font-medium">{formatDate(activeConnection.lastConnected?.toISOString())}</span>
                     </div>
                   </div>
                 )}
@@ -373,7 +380,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
               {/* Quick Actions */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
-                  onClick={() => window.open(activeConnection.base_url, '_blank')}
+                  onClick={() => window.open(activeConnection.baseUrl, '_blank')}
                   className="flex items-center justify-center space-x-2 px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white rounded-xl font-semibold transition-all duration-200"
                 >
                   <ExternalLink className="w-5 h-5" />

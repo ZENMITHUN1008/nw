@@ -1,163 +1,276 @@
 
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Mic, Settings, Plus, Zap, Activity, Clock, Play } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import { useN8n } from '../hooks/useN8n';
+import { useState, useEffect } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { Navigate, useNavigate } from "react-router-dom";
+import { ConnectionSetup } from "../components/ConnectionSetup";
+import { WorkflowGrid } from "../components/WorkflowGrid";
+import { WorkflowList } from "../components/WorkflowList";
+import { ProfilePage } from "../components/ProfilePage";
+import { MCPServerManager } from "../components/MCPServerManager";
+import UsageLimitModal from "../components/UsageLimitModal";
+import PricingModal from "../components/PricingModal";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Badge } from "../components/ui/badge";
+import { Progress } from "../components/ui/progress";
+import { supabase } from "../integrations/supabase/client";
+import { useSubscription } from "../hooks/useSubscription";
+import { Grid, List, User, Settings, LogOut, Crown, Shield, MessageSquare } from "lucide-react";
+import { toast } from "sonner";
+import { Logo } from "../components/Logo";
 
 const Dashboard = () => {
-  const { user } = useAuth();
-  const { createWorkflow, updateWorkflow, workflows, loading } = useN8n();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { currentTier } = useSubscription();
+  const [activeTab, setActiveTab] = useState("workflows");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showUsageModal, setShowUsageModal] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [usageData] = useState({
+    workflowsUsed: 0,
+    workflowsLimit: 5,
+    executionsUsed: 0,
+    executionsLimit: 100,
+  });
 
-  const handleCreateWorkflow = async () => {
+  useEffect(() => {
+    // Track dashboard access
+    const trackAccess = async () => {
+      if (user) {
+        await supabase.from('user_analytics').insert({
+          user_id: user.id,
+          action_type: 'dashboard_access',
+          resource_type: 'page',
+          resource_id: 'dashboard',
+          metadata: { timestamp: new Date().toISOString() }
+        });
+      }
+    };
+
+    trackAccess();
+  }, [user]);
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  const handleLogout = async () => {
     try {
-      await createWorkflow({
-        name: 'New Workflow',
-        description: 'Created from dashboard',
-        workflow_data: {}
+      // Track logout
+      await supabase.from('user_analytics').insert({
+        user_id: user.id,
+        action_type: 'logout',
+        resource_type: 'auth',
+        resource_id: 'user_session',
+        metadata: { timestamp: new Date().toISOString() }
       });
+
+      await signOut();
+      toast.success("Successfully logged out");
+      navigate("/");
     } catch (error) {
-      console.error('Failed to create workflow:', error);
+      console.error("Logout error:", error);
+      toast.error("Failed to logout");
     }
   };
 
-  const handleUpdateWorkflow = async (id: string) => {
-    try {
-      await updateWorkflow(id, {
-        name: 'Updated Workflow',
-        description: 'Updated from dashboard'
+  const handleMasterPortal = () => {
+    // Track master portal access
+    if (user) {
+      supabase.from('user_analytics').insert({
+        user_id: user.id,
+        action_type: 'master_portal_access',
+        resource_type: 'navigation',
+        resource_id: 'master_portal',
+        metadata: { timestamp: new Date().toISOString() }
       });
-    } catch (error) {
-      console.error('Failed to update workflow:', error);
     }
+    
+    navigate("/master-portal");
   };
 
-  const quickActions = [
-    {
-      title: 'Voice Command',
-      description: 'Create workflows with voice',
-      icon: Mic,
-      action: () => {},
-      color: 'bg-emerald-500'
-    },
-    {
-      title: 'New Workflow',
-      description: 'Start from scratch',
-      icon: Plus,
-      action: handleCreateWorkflow,
-      color: 'bg-blue-500'
-    },
-    {
-      title: 'AI Playground',
-      description: 'Experiment with AI',
-      icon: Zap,
-      action: () => {},
-      color: 'bg-purple-500'
-    }
-  ];
-
-  const stats = [
-    { label: 'Active Workflows', value: workflows?.length || 0, icon: Activity },
-    { label: 'This Month', value: '12', icon: Clock },
-    { label: 'Success Rate', value: '98%', icon: Play }
-  ];
+  const isFreePlan = !currentTier || currentTier.id === "free";
+  const usagePercentage = (usageData.workflowsUsed / usageData.workflowsLimit) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-            <p className="text-slate-400">Welcome back, {user?.email}</p>
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
+      {/* Header */}
+      <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Logo />
+            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+            {isFreePlan && (
+              <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">
+                Free Plan
+              </Badge>
+            )}
           </div>
-          <Button variant="outline" size="sm">
-            <Settings className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/ai-playground')}
+              className="text-primary hover:bg-primary/10"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              AI Playground
+            </Button>
+            {isFreePlan && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPricingModal(true)}
+                className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Upgrade
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
+      </header>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index} className="bg-slate-800/50 border-slate-700">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-400 text-sm">{stat.label}</p>
-                    <p className="text-2xl font-bold text-white">{stat.value}</p>
-                  </div>
-                  <stat.icon className="w-8 h-8 text-indigo-400" />
+      <div className="container mx-auto px-4 py-8">
+        {/* Usage Overview Card for Free Plan */}
+        {isFreePlan && (
+          <Card className="mb-6 border-amber-200 bg-amber-50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-amber-800">
+                <Crown className="w-5 h-5 mr-2" />
+                Free Plan Usage
+              </CardTitle>
+              <CardDescription className="text-amber-700">
+                You're currently on the free plan with limited features
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Workflows Created</span>
+                  <span>{usageData.workflowsUsed} / {usageData.workflowsLimit}</span>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Quick Actions */}
-        <Card className="bg-slate-800/50 border-slate-700 mb-8">
-          <CardHeader>
-            <CardTitle className="text-white">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {quickActions.map((action, index) => (
-                <button
-                  key={index}
-                  onClick={action.action}
-                  className="p-6 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors text-left group"
-                >
-                  <div className={`w-12 h-12 rounded-lg ${action.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <action.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="font-semibold text-white mb-2">{action.title}</h3>
-                  <p className="text-slate-400 text-sm">{action.description}</p>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Workflows */}
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white">Recent Workflows</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-slate-400">Loading workflows...</div>
-            ) : workflows && workflows.length > 0 ? (
-              <div className="space-y-4">
-                {workflows.slice(0, 5).map((workflow: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-white">{workflow.name}</h4>
-                      <p className="text-slate-400 text-sm">{workflow.description}</p>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleUpdateWorkflow(workflow.id)}
-                    >
-                      Edit
-                    </Button>
-                  </div>
-                ))}
+                <Progress value={usagePercentage} className="h-2" />
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-slate-400">No workflows yet. Create your first one!</p>
-                <Button 
-                  onClick={handleCreateWorkflow}
-                  className="mt-4"
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  onClick={() => setShowUsageModal(true)}
+                  variant="outline"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Workflow
+                  View Details
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setShowPricingModal(true)}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  Upgrade Now
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main Content */}
+        <div className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="workflows" className="flex items-center space-x-2">
+                <Grid className="w-4 h-4" />
+                <span>Workflows</span>
+              </TabsTrigger>
+              <TabsTrigger value="connections" className="flex items-center space-x-2">
+                <Settings className="w-4 h-4" />
+                <span>Connections</span>
+              </TabsTrigger>
+              <TabsTrigger value="mcp" className="flex items-center space-x-2">
+                <Settings className="w-4 h-4" />
+                <span>MCP Servers</span>
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="flex items-center space-x-2">
+                <User className="w-4 h-4" />
+                <span>Profile</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="workflows" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Your Workflows</h2>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <Grid className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              {viewMode === "grid" ? (
+                <WorkflowGrid workflows={[]} onAction={() => {}} />
+              ) : (
+                <WorkflowList workflows={[]} onAction={() => {}} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="connections">
+              <ConnectionSetup onSkip={() => {}} onSuccess={() => {}} />
+            </TabsContent>
+
+            <TabsContent value="mcp">
+              <MCPServerManager onBack={() => {}} />
+            </TabsContent>
+
+            <TabsContent value="profile">
+              <ProfilePage onBack={() => {}} />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Master Portal Button - Fixed at bottom */}
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            onClick={handleMasterPortal}
+            className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 px-6 py-3 rounded-full"
+            size="lg"
+          >
+            <Shield className="w-5 h-5 mr-2" />
+            Master Portal
+          </Button>
+        </div>
       </div>
+
+      {/* Modals */}
+      <UsageLimitModal
+        isOpen={showUsageModal}
+        onClose={() => setShowUsageModal(false)}
+        limitType="workflow"
+        currentTier={currentTier}
+        usage={{ workflows: usageData.workflowsUsed, voiceMinutes: 0 }}
+        onUpgrade={() => {
+          setShowUsageModal(false);
+          setShowPricingModal(true);
+        }}
+      />
+
+      <PricingModal
+        isOpen={showPricingModal}
+        onClose={() => setShowPricingModal(false)}
+      />
     </div>
   );
 };

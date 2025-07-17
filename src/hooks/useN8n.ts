@@ -17,7 +17,7 @@ export const useN8n = () => {
 
   // Set active connection when connections change
   useEffect(() => {
-    const active = connections.find(conn => conn.is_active);
+    const active = connections.find(conn => conn.isActive);
     setActiveConnection(active || null);
     
     if (active) {
@@ -38,11 +38,11 @@ export const useN8n = () => {
     }
   }, []);
 
-  const testConnection = useCallback(async () => {
+  const testConnection = useCallback(async (baseUrl: string, apiKey: string, instanceName: string) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await n8nService.testConnection();
+      const response = await n8nService.testConnection(baseUrl, apiKey, instanceName);
       if (!response.success) {
         setError(response.error || 'Connection test failed');
         throw new Error(response.error || 'Connection test failed');
@@ -140,11 +140,11 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const deleteWorkflow = useCallback(async () => {
+  const deleteWorkflow = useCallback(async (workflowId: string) => {
     try {
       setLoading(true);
       setError(null);
-      await n8nService.deleteWorkflow();
+      await n8nService.deleteWorkflow(workflowId);
       await loadWorkflows(); // Reload workflows
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete workflow';
@@ -155,11 +155,11 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const activateWorkflow = useCallback(async () => {
+  const activateWorkflow = useCallback(async (workflowId: string) => {
     try {
       setLoading(true);
       setError(null);
-      await n8nService.activateWorkflow();
+      await n8nService.activateWorkflow(workflowId);
       await loadWorkflows(); // Reload workflows
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to activate workflow';
@@ -170,11 +170,11 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const deactivateWorkflow = useCallback(async () => {
+  const deactivateWorkflow = useCallback(async (workflowId: string) => {
     try {
       setLoading(true);
       setError(null);
-      await n8nService.deactivateWorkflow();
+      await n8nService.deactivateWorkflow(workflowId);
       await loadWorkflows(); // Reload workflows
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to deactivate workflow';
@@ -185,11 +185,11 @@ export const useN8n = () => {
     }
   }, [loadWorkflows]);
 
-  const executeWorkflow = useCallback(async () => {
+  const executeWorkflow = useCallback(async (workflowId: string, data: any = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const execution = await n8nService.executeWorkflow();
+      const execution = await n8nService.executeWorkflow(workflowId, data);
       return execution;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to execute workflow';
@@ -200,11 +200,11 @@ export const useN8n = () => {
     }
   }, []);
 
-  const loadExecutions = useCallback(async () => {
+  const loadExecutions = useCallback(async (workflowId?: string, limit: number = 20) => {
     try {
       setLoading(true);
       setError(null);
-      const executionData = await n8nService.getExecutions();
+      const executionData = await n8nService.getExecutions(workflowId, limit);
       setExecutions(executionData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load executions');
@@ -218,21 +218,6 @@ export const useN8n = () => {
       return await n8nService.healthCheck();
     } catch (err) {
       return { status: 'error', message: err instanceof Error ? err.message : 'Health check failed' };
-    }
-  }, []);
-
-  const deployWorkflow = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await n8nService.deployWorkflow();
-      return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to deploy workflow';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -259,7 +244,6 @@ export const useN8n = () => {
     activateWorkflow,
     deactivateWorkflow,
     executeWorkflow,
-    deployWorkflow,
 
     // Execution methods
     loadExecutions,

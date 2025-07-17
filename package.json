@@ -11,9 +11,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-progress": "^1.1.7",
+    "@radix-ui/react-tabs": "^1.1.12",
     "@revenuecat/purchases-js": "^1.7.0",
     "@supabase/supabase-js": "^2.51.0",
-    "@tanstack/react-query": "^5.83.0",
+    "class-variance-authority": "^0.7.1",
     "lovable-tagger": "^1.1.8",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
@@ -23,7 +25,9 @@
     "react-syntax-highlighter": "^15.5.0",
     "recharts": "^2.12.7",
     "remark-gfm": "^4.0.0",
-    "stripe": "^18.2.1"
+    "sonner": "^2.0.6",
+    "stripe": "^18.2.1",
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

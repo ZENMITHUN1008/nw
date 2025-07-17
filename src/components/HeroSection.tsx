@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Mic, Play, BarChart3, Globe, Zap, Infinity, Rocket, ChevronDown } from 'lucide-react';
 import {AuthModal} from './AuthModal';
@@ -5,12 +6,10 @@ import { useAuth } from '../hooks/useAuth';
 import Logo from './Logo';
 
 interface HeroSectionProps {
-  onGetStarted?: () => void;
+  onDashboardClick?: () => void;
 }
 
-const HeroSection: React.FC<HeroSectionProps> = ({ 
-  onGetStarted
-}) => {
+const HeroSection: React.FC<HeroSectionProps> = ({ onDashboardClick }) => {
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
@@ -43,8 +42,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   }, []);
 
   const handleStartBuildingClick = () => {
-    if (user && onGetStarted) {
-      onGetStarted();
+    if (user && onDashboardClick) {
+      onDashboardClick();
     } else {
       setAuthMode('signup');
       setIsAuthModalOpen(true);
