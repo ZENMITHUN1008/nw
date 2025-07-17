@@ -1,3 +1,4 @@
+
 import { supabase } from '../integrations/supabase/client';
 
 export interface N8nConnection {
@@ -6,7 +7,7 @@ export interface N8nConnection {
   instance_name: string;
   base_url: string;
   api_key: string;
-  workflow_count: number;
+  workflow_count: number | null;
   version: string | null;
   connection_status: 'connected' | 'disconnected' | 'error';
   is_active: boolean;
@@ -39,7 +40,6 @@ export interface N8nExecution {
 
 class N8nService {
   private connections: N8nConnection[] = [];
-  private activeConnection: N8nConnection | null = null;
 
   async getConnections(): Promise<N8nConnection[]> {
     try {
@@ -57,7 +57,7 @@ class N8nService {
     }
   }
 
-  async testConnection(baseUrl: string, apiKey: string): Promise<{ success: boolean; data?: any; error?: string }> {
+  async testConnection(): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       // Mock test - in real implementation, this would call n8n API
       return {
@@ -161,20 +161,24 @@ class N8nService {
     };
   }
 
-  async deleteWorkflow(): Promise<void> {
+  async deleteWorkflow(workflowId: string): Promise<void> {
     // Mock implementation
+    console.log('Deleting workflow:', workflowId);
   }
 
-  async activateWorkflow(): Promise<void> {
+  async activateWorkflow(workflowId: string): Promise<void> {
     // Mock implementation
+    console.log('Activating workflow:', workflowId);
   }
 
-  async deactivateWorkflow(): Promise<void> {
+  async deactivateWorkflow(workflowId: string): Promise<void> {
     // Mock implementation
+    console.log('Deactivating workflow:', workflowId);
   }
 
-  async executeWorkflow(): Promise<N8nExecution> {
+  async executeWorkflow(workflowId: string, data: any = {}): Promise<N8nExecution> {
     // Mock implementation
+    console.log('Executing workflow:', workflowId, data);
     return {
       id: '1',
       workflowId: '1',
@@ -189,8 +193,9 @@ class N8nService {
     };
   }
 
-  async getExecutions(): Promise<N8nExecution[]> {
+  async getExecutions(workflowId?: string, limit: number = 20): Promise<N8nExecution[]> {
     // Mock implementation
+    console.log('Getting executions:', workflowId, limit);
     return [];
   }
 
@@ -198,7 +203,7 @@ class N8nService {
     return { status: 'ok' };
   }
 
-  async deployWorkflow(workflow: any): Promise<any> {
+  async deployWorkflow(): Promise<any> {
     // Mock implementation
     return { success: true, workflowId: '1' };
   }

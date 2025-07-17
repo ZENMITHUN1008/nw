@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -11,7 +12,7 @@ import { useUser, useSupabaseClient } from '../hooks/useSupabase'
 import { useN8n } from "../hooks/useN8n";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "../components/ui/dropdown-menu"
 import { aiService, ChatMessage, AIWorkflowRequest } from "../services/aiService";
-import MarkdownRenderer from '../components/MarkdownRenderer';
+import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { WorkflowSummary } from '../components/WorkflowSummary';
 import { WorkflowCredentialsManager } from '../components/WorkflowCredentialsManager';
 
@@ -48,7 +49,7 @@ export default function AIPlayground() {
   const loadMessages = async () => {
     if (!user) return;
     try {
-      const loadedMessages = await aiService.loadConversation(sessionId);
+      const loadedMessages = await aiService.loadConversation();
       setMessages(loadedMessages);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -82,7 +83,7 @@ export default function AIPlayground() {
     };
 
     try {
-      for await (const chunk of aiService.generateWorkflowStream(request)) {
+      for await (const chunk of aiService.generateWorkflowStream()) {
         if (chunk.type === 'text') {
           assistantMessage.content += chunk.content;
           setCurrentResponse(assistantMessage.content);

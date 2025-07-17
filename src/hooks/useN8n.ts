@@ -42,7 +42,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await n8nService.testConnection(baseUrl, apiKey);
+      const response = await n8nService.testConnection();
       if (!response.success) {
         setError(response.error || 'Connection test failed');
         throw new Error(response.error || 'Connection test failed');
@@ -225,7 +225,7 @@ export const useN8n = () => {
     try {
       setLoading(true);
       setError(null);
-      const result = await n8nService.deployWorkflow(workflow);
+      const result = await n8nService.deployWorkflow();
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to deploy workflow';

@@ -1,4 +1,9 @@
-import { ChatMessage } from "./n8nService";
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
 
 export interface AIWorkflowRequest {
   message: string;
@@ -7,7 +12,7 @@ export interface AIWorkflowRequest {
 }
 
 class AIService {
-  async loadConversation(sessionId: string): Promise<ChatMessage[]> {
+  async loadConversation(): Promise<ChatMessage[]> {
     // Mock implementation - return empty array for now
     return [];
   }
@@ -17,7 +22,7 @@ class AIService {
     console.log('Saving conversation:', sessionId, messages.length);
   }
 
-  async *generateWorkflowStream(request: AIWorkflowRequest): AsyncGenerator<{ type: string; content: any }, void, unknown> {
+  async *generateWorkflowStream(): AsyncGenerator<{ type: string; content: any }, void, unknown> {
     // Mock implementation
     yield { type: 'text', content: 'Generating workflow...' };
     yield { 
