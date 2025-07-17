@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -125,7 +124,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
 
     setStep('testing');
     try {
-      const result = await testConnection(formData.baseUrl, formData.apiKey, formData.instanceName);
+      const result = await testConnection(formData.baseUrl, formData.apiKey);
       setTestResult(result);
       
       if (result.success) {
@@ -194,10 +193,10 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     switch (status) {
       case 'connected':
         return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
-      case 'error':
-        return 'text-red-500 bg-red-500/10 border-red-500/20';
-      default:
+      case 'disconnected':
         return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+      default:
+        return 'text-red-500 bg-red-500/10 border-red-500/20';
     }
   };
 

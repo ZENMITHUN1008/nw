@@ -1,18 +1,17 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '../integrations/supabase/client';
 
 export interface N8nConnection {
   id: string;
   user_id: string;
+  instance_name: string;
   base_url: string;
   api_key: string;
-  instance_name: string;
   workflow_count: number;
   version: string | null;
-  connection_status: 'connected' | 'disconnected';
+  connection_status: 'connected' | 'disconnected' | 'error';
   is_active: boolean;
+  created_at: string;
   last_connected: string | null;
-  created_at?: string;
-  updated_at?: string;
 }
 
 export interface N8nWorkflow {
@@ -20,167 +19,188 @@ export interface N8nWorkflow {
   name: string;
   active: boolean;
   nodes: any[];
-  connections: any[];
-  created_at?: string;
-  updated_at?: string;
+  connections: any;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface N8nExecution {
   id: string;
-  workflow_id: string;
-  status: 'running' | 'completed' | 'failed';
-  started_at: string;
-  stopped_at: string;
+  workflowId: string;
+  mode: string;
+  retryOf: null | string;
+  retrySuccessId: null | string;
+  startedAt: Date;
+  stoppedAt: Date;
+  finished: boolean;
+  status: string;
   data: any;
-  error: any;
-  created_at?: string;
-  updated_at?: string;
 }
 
-export class N8nService {
-  private baseUrl: string = '';
-  private apiKey: string = '';
-  private supabase = supabase;
+class N8nService {
+  private connections: N8nConnection[] = [];
+  private activeConnection: N8nConnection | null = null;
 
-  setBaseUrl(url: string) {
-    this.baseUrl = url;
-  }
+  async getConnections(): Promise<N8nConnection[]> {
+    try {
+      const { data, error } = await supabase
+        .from('n8n_connections')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  setApiKey(key: string) {
-    this.apiKey = key;
+      if (error) throw error;
+      this.connections = data || [];
+      return this.connections;
+    } catch (error) {
+      console.error('Error fetching connections:', error);
+      throw error;
+    }
   }
 
   async testConnection(baseUrl: string, apiKey: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      // Mock successful connection test
-      return { 
-        success: true, 
-        data: { 
-          version: '1.0.0', 
-          workflowCount: 5 
-        } 
+      // Mock test - in real implementation, this would call n8n API
+      return {
+        success: true,
+        data: {
+          workflowCount: 5,
+          version: '1.0.0'
+        }
       };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Connection failed' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection test failed'
       };
     }
   }
 
-  async saveConnection(baseUrl: string, apiKey: string, instanceName: string, workflowCount?: number, version?: string): Promise<{ success: boolean; error?: string }> {
+  async saveConnection(baseUrl: string, apiKey: string, instanceName: string, workflowCount?: number, version?: string): Promise<{ success: boolean; error?: string; data?: N8nConnection }> {
     try {
-      const { data: { user } } = await this.supabase.auth.getUser();
+      // First deactivate all other connections
+      await supabase
+        .from('n8n_connections')
+        .update({ is_active: false })
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      const { error } = await this.supabase
+      const connectionData = {
+        user_id: user.id,
+        instance_name: instanceName,
+        base_url: baseUrl,
+        api_key: apiKey,
+        workflow_count: workflowCount || 0,
+        version: version || null,
+        connection_status: 'connected' as const,
+        is_active: true,
+        last_connected: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
         .from('n8n_connections')
-        .insert({
-          user_id: user.id,
-          base_url: baseUrl,
-          api_key: apiKey,
-          instance_name: instanceName,
-          workflow_count: workflowCount || 0,
-          version: version || null,
-          connection_status: 'connected',
-          is_active: true,
-          last_connected: new Date().toISOString()
-        });
+        .insert(connectionData)
+        .select()
+        .single();
 
       if (error) throw error;
-      return { success: true };
+
+      return { success: true, data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to save connection' 
+      console.error('Error saving connection:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to save connection'
       };
     }
   }
 
-  async deleteConnection(connectionId: string): Promise<{ success: boolean; error?: string }> {
+  async deleteConnection(connectionId: string): Promise<void> {
     try {
-      const { data: { user } } = await this.supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { error } = await this.supabase
+      const { error } = await supabase
         .from('n8n_connections')
         .delete()
-        .match({ id: connectionId, user_id: user.id });
+        .eq('id', connectionId);
 
       if (error) throw error;
-      return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to delete connection' 
-      };
-    }
-  }
-
-  async getConnections(): Promise<N8nConnection[]> {
-    try {
-      const { data: { user } } = await this.supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await this.supabase
-        .from('n8n_connections')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data as N8nConnection[];
-    } catch (error) {
-      console.error('Failed to get connections:', error);
-      return [];
+      console.error('Error deleting connection:', error);
+      throw error;
     }
   }
 
   async getWorkflows(): Promise<N8nWorkflow[]> {
-    // Mock implementation
+    // Mock implementation - return empty array for now
     return [];
   }
 
   async createWorkflow(workflow: any): Promise<N8nWorkflow> {
     // Mock implementation
-    return workflow;
+    return {
+      id: '1',
+      name: workflow.name,
+      active: false,
+      nodes: workflow.nodes || [],
+      connections: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
   }
 
   async updateWorkflow(workflow: any): Promise<N8nWorkflow> {
     // Mock implementation
-    return workflow;
+    return {
+      id: workflow.id,
+      name: workflow.name,
+      active: false,
+      nodes: workflow.nodes || [],
+      connections: {},
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
   }
 
-  async deleteWorkflow(workflowId: string): Promise<void> {
+  async deleteWorkflow(): Promise<void> {
     // Mock implementation
   }
 
-  async activateWorkflow(workflowId: string): Promise<void> {
+  async activateWorkflow(): Promise<void> {
     // Mock implementation
   }
 
-  async deactivateWorkflow(workflowId: string): Promise<void> {
+  async deactivateWorkflow(): Promise<void> {
     // Mock implementation
   }
 
-  async executeWorkflow(workflowId: string, data: any): Promise<N8nExecution> {
+  async executeWorkflow(): Promise<N8nExecution> {
     // Mock implementation
-    return {} as N8nExecution;
+    return {
+      id: '1',
+      workflowId: '1',
+      mode: 'manual',
+      retryOf: null,
+      retrySuccessId: null,
+      startedAt: new Date(),
+      stoppedAt: new Date(),
+      finished: true,
+      status: 'success',
+      data: {}
+    };
   }
 
-  async getExecutions(workflowId?: string, limit: number = 20): Promise<N8nExecution[]> {
+  async getExecutions(): Promise<N8nExecution[]> {
     // Mock implementation
     return [];
   }
 
   async healthCheck(): Promise<{ status: string; message?: string }> {
-    // Mock implementation
     return { status: 'ok' };
   }
 
   async deployWorkflow(workflow: any): Promise<any> {
     // Mock implementation
-    return workflow;
+    return { success: true, workflowId: '1' };
   }
 }
 

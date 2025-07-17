@@ -1,60 +1,85 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Activity, Play, Pause, Trash2, Edit, Eye } from 'lucide-react';
+import { 
+  Play, 
+  Pause, 
+  MoreVertical, 
+  ExternalLink, 
+  Edit, 
+  Trash2, 
+  Eye 
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface WorkflowGridProps {
-  workflows: Array<{
-    id: string;
-    name: string;
-    active: boolean;
-    created_at?: string;
-    updated_at?: string;
-  }>;
-  onAction: (workflowId: string, action: 'activate' | 'deactivate' | 'delete' | 'edit' | 'view') => void;
+  workflows: any[];
+  onAction: (workflowId: string, action: string) => void;
   baseUrl: string;
 }
 
-export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction }) => {
+export const WorkflowGrid: React.FC<WorkflowGridProps> = ({ workflows, onAction, baseUrl }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {workflows.map((workflow) => (
-        <Card key={workflow.id} className="hover:shadow-lg transition-shadow">
+      {workflows.map((workflow: any) => (
+        <Card key={workflow.id}>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{workflow.name}</CardTitle>
+            <CardTitle>{workflow.name}</CardTitle>
+            <CardDescription>
               <Badge variant={workflow.active ? "default" : "secondary"}>
                 {workflow.active ? "Active" : "Inactive"}
               </Badge>
-            </div>
-            <CardDescription>
-              Created: {workflow.created_at ? new Date(workflow.created_at).toLocaleDateString() : 'Unknown'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant={workflow.active ? "outline" : "default"}
-                onClick={() => onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
+          <CardContent className="space-y-2">
+            <p className="text-sm text-gray-500">
+              Created: {new Date(workflow.createdAt).toLocaleDateString()}
+            </p>
+            <div className="flex justify-between items-center">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open(`${baseUrl}/workflow/${workflow.id}`, '_blank')}
               >
-                {workflow.active ? <Pause className="w-4 h-4 mr-1" /> : <Play className="w-4 h-4 mr-1" />}
-                {workflow.active ? 'Deactivate' : 'Activate'}
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open in n8n
               </Button>
-              <Button size="sm" variant="outline" onClick={() => onAction(workflow.id, 'edit')}>
-                <Edit className="w-4 h-4 mr-1" />
-                Edit
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => onAction(workflow.id, 'view')}>
-                <Eye className="w-4 h-4 mr-1" />
-                View
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => onAction(workflow.id, 'delete')}>
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <MoreVertical className="w-4 h-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onAction(workflow.id, 'view')}>
+                    <Eye className="w-4 h-4 mr-2" />
+                    View
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onAction(workflow.id, 'edit')}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  {workflow.active ? (
+                    <DropdownMenuItem onClick={() => onAction(workflow.id, 'deactivate')}>
+                      <Pause className="w-4 h-4 mr-2" />
+                      Deactivate
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onClick={() => onAction(workflow.id, 'activate')}>
+                      <Play className="w-4 h-4 mr-2" />
+                      Activate
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => onAction(workflow.id, 'delete')}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardContent>
         </Card>
