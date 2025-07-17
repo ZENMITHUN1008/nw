@@ -1,4 +1,3 @@
-
 import { supabase } from "../integrations/supabase/client";
 
 export interface ChatMessage {
@@ -109,6 +108,12 @@ class AIService {
         if (response.data.content || response.data.explanation) {
           yield { type: 'text', content: response.data.content || response.data.explanation };
         }
+
+        // Add workflow summary after the main content
+        if (response.data.workflow) {
+          const summary = this.generateWorkflowSummary(response.data.workflow);
+          yield { type: 'text', content: summary };
+        }
       }
 
       yield { type: 'complete', content: '' };
@@ -118,6 +123,36 @@ class AIService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       yield { type: 'error', content: errorMessage };
     }
+  }
+
+  private generateWorkflowSummary(workflow: any): string {
+    if (!workflow || !workflow.nodes) return '';
+
+    const nodeCount = workflow.nodes.length;
+    const services = workflow.nodes.map((node: any) => {
+      if (node.type.includes('googleSheets')) return 'Google Sheets';
+      if (node.type.includes('youtube')) return 'YouTube';
+      if (node.type.includes('telegram')) return 'Telegram';
+      if (node.type.includes('slack')) return 'Slack';
+      if (node.type.includes('gmail')) return 'Gmail';
+      if (node.type.includes('webhook')) return 'Webhook';
+      return node.type.replace('n8n-nodes-base.', '');
+    });
+
+    const uniqueServices = [...new Set(services)];
+    
+    return `\n\n🎉 **Workflow Summary:**
+- **Name:** ${workflow.name || 'AI Generated Workflow'}
+- **Nodes:** ${nodeCount} automation steps
+- **Services:** ${uniqueServices.join(', ')}
+- **Status:** Ready for credential configuration and deployment
+
+📋 **Next Steps:**
+1. Review the workflow components above
+2. Provide required API credentials in the form below
+3. Deploy directly to your n8n instance
+
+The workflow is now ready to be configured with your credentials and deployed!`;
   }
 
   async chat(messages: ChatMessage[]): Promise<ChatMessage> {
