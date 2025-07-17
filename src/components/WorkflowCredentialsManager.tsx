@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Badge } from "./ui/badge";
 import { CheckCircle, AlertCircle, ExternalLink } from "lucide-react";
-import { useN8n } from "@/hooks/useN8n";
+import { useN8n } from "../hooks/useN8n";
 
 interface Credential {
   nodeType: string;
@@ -202,7 +202,7 @@ export const WorkflowCredentialsManager: React.FC<WorkflowCredentialsManagerProp
                       type={cred.credentialType.includes('token') ? 'password' : 'text'}
                       placeholder={cred.placeholder}
                       value={cred.value || ''}
-                      onChange={(e) => updateCredentialValue(index, e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateCredentialValue(index, e.target.value)}
                       className="w-full"
                     />
                   </TableCell>

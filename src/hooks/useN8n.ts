@@ -17,7 +17,7 @@ export const useN8n = () => {
 
   // Set active connection when connections change
   useEffect(() => {
-    const active = connections.find(conn => conn.isActive);
+    const active = connections.find(conn => conn.is_active);
     setActiveConnection(active || null);
     
     if (active) {
@@ -221,6 +221,21 @@ export const useN8n = () => {
     }
   }, []);
 
+  const deployWorkflow = useCallback(async (workflow: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await n8nService.deployWorkflow(workflow);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to deploy workflow';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     // State
     connections,
@@ -244,6 +259,7 @@ export const useN8n = () => {
     activateWorkflow,
     deactivateWorkflow,
     executeWorkflow,
+    deployWorkflow,
 
     // Execution methods
     loadExecutions,

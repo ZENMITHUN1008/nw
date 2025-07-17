@@ -1,3 +1,4 @@
+
 import { supabase } from "../integrations/supabase/client";
 
 export interface N8nConnection {
@@ -5,9 +6,35 @@ export interface N8nConnection {
   user_id: string;
   base_url: string;
   api_key: string;
-  name: string;
+  instance_name: string;
   workflow_count: number;
   last_connected: string;
+  connection_status: string;
+  is_active: boolean;
+  version?: string;
+  created_at?: string;
+  updated_at?: string;
+  execution_count?: number;
+}
+
+export interface N8nWorkflow {
+  id: string;
+  name: string;
+  active: boolean;
+  nodes: any[];
+  connections: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface N8nExecution {
+  id: string;
+  workflowId: string;
+  finished: boolean;
+  mode: string;
+  startedAt: string;
+  stoppedAt?: string;
+  status: string;
 }
 
 export class N8nService {
@@ -69,7 +96,7 @@ export class N8nService {
           user_id: user.id,
           base_url: baseUrl,
           api_key: apiKey,
-          name: name
+          instance_name: name
         })
         .select('*')
         .single();
@@ -86,6 +113,45 @@ export class N8nService {
     }
   }
 
+  async saveConnection(baseUrl: string, apiKey: string, instanceName: string, workflowCount?: number, version?: string): Promise<{ success: boolean; error?: string; data?: any }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { success: false, error: 'Not authenticated' };
+
+      // First deactivate all existing connections
+      await supabase
+        .from('n8n_connections')
+        .update({ is_active: false })
+        .eq('user_id', user.id);
+
+      const { data, error } = await supabase
+        .from('n8n_connections')
+        .insert({
+          user_id: user.id,
+          base_url: baseUrl,
+          api_key: apiKey,
+          instance_name: instanceName,
+          workflow_count: workflowCount || 0,
+          version: version,
+          is_active: true,
+          connection_status: 'connected',
+          last_connected: new Date().toISOString()
+        })
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Error saving n8n connection:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Error saving n8n connection:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
   async updateConnection(connectionId: string, baseUrl: string, apiKey: string, name: string): Promise<N8nConnection | null> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -96,7 +162,7 @@ export class N8nService {
         .update({
           base_url: baseUrl,
           api_key: apiKey,
-          name: name
+          instance_name: name
         })
         .eq('id', connectionId)
         .eq('user_id', user.id)
@@ -138,7 +204,7 @@ export class N8nService {
     }
   }
 
-  async testConnection(baseUrl: string, apiKey: string): Promise<boolean> {
+  async testConnection(baseUrl: string, apiKey: string, instanceName: string): Promise<{ success: boolean; error?: string; data?: any; message?: string }> {
     try {
       const response = await fetch(`${baseUrl}/api/v1/workflows`, {
         headers: {
@@ -146,11 +212,75 @@ export class N8nService {
         },
       });
 
-      return response.ok;
+      if (!response.ok) {
+        return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
+      }
+
+      const workflows = await response.json();
+      
+      // Get n8n version
+      let version = 'Unknown';
+      try {
+        const healthResponse = await fetch(`${baseUrl}/healthz`);
+        if (healthResponse.ok) {
+          const healthData = await healthResponse.json();
+          version = healthData.version || 'Unknown';
+        }
+      } catch (e) {
+        console.log('Could not fetch version');
+      }
+
+      return { 
+        success: true, 
+        message: 'Connection successful',
+        data: { 
+          workflowCount: workflows.data?.length || 0,
+          version 
+        }
+      };
     } catch (error) {
       console.error('Error testing n8n connection:', error);
-      return false;
+      return { success: false, error: error instanceof Error ? error.message : 'Connection failed' };
     }
+  }
+
+  async getWorkflows(): Promise<N8nWorkflow[]> {
+    // This would fetch workflows from n8n API
+    // For now returning empty array as placeholder
+    return [];
+  }
+
+  async createWorkflow(workflow: any): Promise<N8nWorkflow> {
+    // This would create workflow via n8n API
+    // For now returning the workflow as placeholder
+    return workflow;
+  }
+
+  async updateWorkflow(workflow: any): Promise<N8nWorkflow> {
+    // This would update workflow via n8n API
+    return workflow;
+  }
+
+  async deleteWorkflow(workflowId: string): Promise<void> {
+    // This would delete workflow via n8n API
+  }
+
+  async activateWorkflow(workflowId: string): Promise<void> {
+    // This would activate workflow via n8n API
+  }
+
+  async deactivateWorkflow(workflowId: string): Promise<void> {
+    // This would deactivate workflow via n8n API
+  }
+
+  async executeWorkflow(workflowId: string, data: any = {}): Promise<any> {
+    // This would execute workflow via n8n API
+    return {};
+  }
+
+  async getExecutions(workflowId?: string, limit: number = 20): Promise<N8nExecution[]> {
+    // This would fetch executions from n8n API
+    return [];
   }
 
   async setActiveConnection(connectionId: string): Promise<void> {
@@ -243,6 +373,24 @@ export class N8nService {
       }
     } catch (error) {
       console.error('Error updating connection stats:', error);
+    }
+  }
+
+  async healthCheck(): Promise<{ status: string; message?: string }> {
+    try {
+      const connection = await this.getActiveConnection();
+      if (!connection) {
+        return { status: 'error', message: 'No active connection' };
+      }
+
+      const response = await fetch(`${connection.base_url}/healthz`);
+      if (response.ok) {
+        return { status: 'ok' };
+      } else {
+        return { status: 'error', message: 'Health check failed' };
+      }
+    } catch (error) {
+      return { status: 'error', message: error instanceof Error ? error.message : 'Health check failed' };
     }
   }
 }
