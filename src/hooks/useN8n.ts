@@ -38,11 +38,11 @@ export const useN8n = () => {
     }
   }, []);
 
-  const testConnection = useCallback(async (baseUrl: string, apiKey: string, instanceName: string) => {
+  const testConnection = useCallback(async (baseUrl: string, apiKey: string) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await n8nService.testConnection(baseUrl, apiKey, instanceName);
+      const response = await n8nService.testConnection(baseUrl, apiKey);
       if (!response.success) {
         setError(response.error || 'Connection test failed');
         throw new Error(response.error || 'Connection test failed');

@@ -1,78 +1,70 @@
+
 import React from 'react';
-import { Activity, Calendar, Play, Pause, Trash2, Edit, Eye } from 'lucide-react';
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { N8nWorkflow } from "../services/n8nService";
+import { Badge } from "./ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Play, Pause, Trash2, Edit, Eye } from 'lucide-react';
 
 interface WorkflowListProps {
-  workflows: N8nWorkflow[];
-  onAction: (workflowId: string, action: 'activate' | 'deactivate' | 'delete' | 'edit' | 'view') => Promise<void>;
+  workflows: Array<{
+    id: string;
+    name: string;
+    active: boolean;
+    created_at?: string;
+    updated_at?: string;
+  }>;
+  onAction: (workflowId: string, action: 'activate' | 'deactivate' | 'delete' | 'edit' | 'view') => void;
   baseUrl: string;
 }
 
-export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction, baseUrl }) => {
+export const WorkflowList: React.FC<WorkflowListProps> = ({ workflows, onAction }) => {
   return (
-    <div className="grid gap-4">
-      {workflows.map((workflow) => (
-        <Card key={workflow.id}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              {workflow.name}
-              <div>
-                {workflow.active ? (
-                  <Badge variant="default">
-                    <Activity className="mr-2 h-4 w-4" />
-                    Active
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">
-                    <Pause className="mr-2 h-4 w-4" />
-                    Inactive
-                  </Badge>
-                )}
-              </div>
-            </CardTitle>
-            <CardDescription>
-              <div className="flex items-center text-gray-500">
-                <Calendar className="mr-2 h-4 w-4" />
-                Created: {new Date(workflow.createdAt).toLocaleDateString()}
-              </div>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between">
-              <div className="space-x-2">
-                <Button variant="ghost" size="sm" onClick={() => onAction(workflow.id, 'view')}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  View
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => onAction(workflow.id, 'edit')}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-                {workflow.active ? (
-                  <Button variant="ghost" size="sm" onClick={() => onAction(workflow.id, 'deactivate')}>
-                    <Pause className="mr-2 h-4 w-4" />
-                    Deactivate
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {workflows.map((workflow) => (
+            <TableRow key={workflow.id}>
+              <TableCell className="font-medium">{workflow.name}</TableCell>
+              <TableCell>
+                <Badge variant={workflow.active ? "default" : "secondary"}>
+                  {workflow.active ? "Active" : "Inactive"}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {workflow.created_at ? new Date(workflow.created_at).toLocaleDateString() : 'Unknown'}
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={workflow.active ? "outline" : "default"}
+                    onClick={() => onAction(workflow.id, workflow.active ? 'deactivate' : 'activate')}
+                  >
+                    {workflow.active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </Button>
-                ) : (
-                  <Button variant="ghost" size="sm" onClick={() => onAction(workflow.id, 'activate')}>
-                    <Play className="mr-2 h-4 w-4" />
-                    Activate
+                  <Button size="sm" variant="outline" onClick={() => onAction(workflow.id, 'edit')}>
+                    <Edit className="w-4 h-4" />
                   </Button>
-                )}
-              </div>
-              <div>
-                <Button variant="destructive" size="sm" onClick={() => onAction(workflow.id, 'delete')}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+                  <Button size="sm" variant="outline" onClick={() => onAction(workflow.id, 'view')}>
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => onAction(workflow.id, 'delete')}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };

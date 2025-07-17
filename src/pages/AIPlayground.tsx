@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -7,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { ModeToggle } from "../components/ModeToggle";
 import { useToast } from "../hooks/use-toast";
 import { Bot, User, Sparkles, Copy, Save, Loader2 } from "lucide-react";
-import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react'
+import { useUser, useSupabaseClient } from '../hooks/useSupabase'
 import { useN8n } from "../hooks/useN8n";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "../components/ui/dropdown-menu"
 import { aiService, ChatMessage, AIWorkflowRequest } from "../services/aiService";
@@ -29,7 +30,7 @@ export default function AIPlayground() {
 
   const supabase = useSupabaseClient()
   const user = useUser()
-  const { activeConnection, connectToN8n, disconnectFromN8n } = useN8n();
+  const { activeConnection } = useN8n();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -326,46 +327,43 @@ export default function AIPlayground() {
               </h2>
 
               {activeConnection ? (
-                <>
-                  <div className="text-green-500 mb-2">
-                    Connected to n8n instance: {activeConnection.base_url}
-                  </div>
-                  <Button variant="destructive" onClick={disconnectFromN8n}>
-                    Disconnect from n8n
-                  </Button>
-                </>
+                <div className="text-green-500 mb-2">
+                  Connected to n8n instance: {activeConnection.base_url}
+                </div>
               ) : (
-                <>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Connect to your n8n instance</CardTitle>
-                      <CardDescription>
-                        Enter your n8n instance URL and API key to connect.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-4">
-                      <div className="grid gap-2">
-                        <label htmlFor="url">URL</label>
-                        <Input
-                          id="url"
-                          placeholder="https://your-n8n-instance.com"
-                          type="url"
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => n8nService.setBaseUrl(e.target.value)}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <label htmlFor="api-key">API Key</label>
-                        <Input
-                          id="api-key"
-                          placeholder="Your n8n API key"
-                          type="password"
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => n8nService.setApiKey(e.target.value)}
-                        />
-                      </div>
-                      <Button onClick={connectToN8n}>Connect</Button>
-                    </CardContent>
-                  </Card>
-                </>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Connect to your n8n instance</CardTitle>
+                    <CardDescription>
+                      Enter your n8n instance URL and API key to connect.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-4">
+                    <div className="grid gap-2">
+                      <label htmlFor="url">URL</label>
+                      <Input
+                        id="url"
+                        placeholder="https://your-n8n-instance.com"
+                        type="url"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          console.log('URL changed:', e.target.value);
+                        }}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <label htmlFor="api-key">API Key</label>
+                      <Input
+                        id="api-key"
+                        placeholder="Your n8n API key"
+                        type="password"
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          console.log('API key changed:', e.target.value);
+                        }}
+                      />
+                    </div>
+                    <Button onClick={() => console.log('Connect clicked')}>Connect</Button>
+                  </CardContent>
+                </Card>
               )}
 
               {isWorkflowVisible && currentWorkflow && (

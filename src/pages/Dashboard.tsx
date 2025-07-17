@@ -1,15 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "@/hooks/use-toast";
-import { useToast } from "@/hooks/use-toast";
-import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react'
-import { useN8n } from "@/hooks/useN8n";
-import { Activity, Calendar, Play, Pause, Trash2, Edit, Eye, Plus, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Switch } from "../components/ui/switch";
+import { useToast } from "../hooks/use-toast";
+import { useUser, useSupabaseClient } from '../hooks/useSupabase'
+import { useN8n } from "../hooks/useN8n";
+import { Activity, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import {
   Table,
   TableHeader,
@@ -17,12 +16,11 @@ import {
   TableHead,
   TableRow,
   TableCell,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge";
+} from "../components/ui/table"
 import AIPlayground from "./AIPlayground";
-import { N8nWorkflow, N8nConnection } from "@/services/n8nService";
-import { WorkflowGrid } from "@/components/WorkflowGrid";
-import { WorkflowList } from "@/components/WorkflowList";
+import { N8nWorkflow, N8nConnection } from "../services/n8nService";
+import { WorkflowGrid } from "../components/WorkflowGrid";
+import { WorkflowList } from "../components/WorkflowList";
 
 export default function Dashboard() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -34,14 +32,10 @@ export default function Dashboard() {
   const [editedWorkflowName, setEditedWorkflowName] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingWorkflowId, setDeletingWorkflowId] = useState<string | null>(null);
-  const [isWorkflowVisible, setIsWorkflowVisible] = useState(false);
-  const [currentWorkflow, setCurrentWorkflow] = useState<any>(null);
   const [activeConnection, setActiveConnection] = useState<N8nConnection | null>(null);
   const [showAIPlayground, setShowAIPlayground] = useState(false);
   const [showConnections, setShowConnections] = useState(false);
 
-  const supabase = useSupabaseClient()
-  const user = useUser()
   const { 
     connections, 
     loadConnections, 
@@ -196,10 +190,8 @@ export default function Dashboard() {
           handleEditWorkflow(workflowId);
           break;
         case 'view':
-            setIsWorkflowVisible(true);
-            const workflowToView = workflows.find(wf => wf.id === workflowId);
-            setCurrentWorkflow(workflowToView);
-            break;
+          // Handle view action
+          break;
         default:
           console.warn(`Unhandled action: ${action}`);
       }
@@ -213,11 +205,6 @@ export default function Dashboard() {
     }
   };
 
-  const workflowsWithoutTags = workflows.map(workflow => ({
-    ...workflow,
-    // Remove tags mapping since N8nWorkflow doesn't have tags property
-  }));
-
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">n8n Workflows</h1>
@@ -229,7 +216,11 @@ export default function Dashboard() {
         </Button>
         <div className="flex items-center space-x-2">
           <Label htmlFor="view-mode">View Mode:</Label>
-          <Switch id="view-mode" checked={viewMode === 'list'} onCheckedChange={(checked) => setViewMode(checked ? 'list' : 'grid')} />
+          <Switch 
+            id="view-mode" 
+            checked={viewMode === 'list'} 
+            onCheckedChange={(checked: boolean) => setViewMode(checked ? 'list' : 'grid')} 
+          />
         </div>
       </div>
 
@@ -239,7 +230,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="text-red-500 mb-2">
-          Not connected to n8n instance: {activeConnection?.base_url}
+          Not connected to n8n instance
         </div>
       )}
 
@@ -257,7 +248,7 @@ export default function Dashboard() {
                   id="workflow-name"
                   placeholder="My New Workflow"
                   value={newWorkflowName}
-                  onChange={(e) => setNewWorkflowName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewWorkflowName(e.target.value)}
                 />
               </div>
               <Button onClick={handleCreateWorkflow} disabled={isCreating}>
@@ -299,7 +290,7 @@ export default function Dashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {connections.map((connection) => (
+                      {connections.map((connection: N8nConnection) => (
                         <TableRow key={connection.id}>
                           <TableCell>
                             <div className="font-medium">{connection.instance_name}</div>
@@ -355,7 +346,7 @@ export default function Dashboard() {
                   id="edit-workflow-name"
                   placeholder="Updated Workflow Name"
                   value={editedWorkflowName}
-                  onChange={(e) => setEditedWorkflowName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditedWorkflowName(e.target.value)}
                 />
               </div>
               <div className="flex justify-end space-x-2">
@@ -406,13 +397,13 @@ export default function Dashboard() {
 
       {viewMode === 'grid' ? (
         <WorkflowGrid 
-          workflows={workflowsWithoutTags} 
+          workflows={workflows} 
           onAction={handleAction}
           baseUrl={activeConnection?.base_url || ''}
         />
       ) : (
         <WorkflowList 
-          workflows={workflowsWithoutTags} 
+          workflows={workflows} 
           onAction={handleAction}
           baseUrl={activeConnection?.base_url || ''}
         />
