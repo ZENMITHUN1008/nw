@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Mic, Play, BarChart3, Globe, Zap, Infinity, Rocket, ChevronDown } from 'lucide-react';
 import {AuthModal} from './AuthModal';
@@ -7,14 +6,10 @@ import Logo from './Logo';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
-  onOpenMCPManager?: () => void;
-  onOpenProfile?: () => void;
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ 
-  onGetStarted,
-  onOpenMCPManager,
-  onOpenProfile
+  onGetStarted
 }) => {
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);

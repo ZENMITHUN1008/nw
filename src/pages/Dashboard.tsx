@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Mic, Settings, Plus, Zap, Activity, Clock, Play } from 'lucide-react';
@@ -72,7 +71,7 @@ const Dashboard = () => {
             <h1 className="text-3xl font-bold text-white">Dashboard</h1>
             <p className="text-slate-400">Welcome back, {user?.email}</p>
           </div>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="sm">
             <Settings className="w-4 h-4" />
           </Button>
         </div>
