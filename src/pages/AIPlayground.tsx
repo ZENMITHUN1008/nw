@@ -1,28 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ModeToggle } from "@/components/ModeToggle";
-import { useToast } from "@/components/ui/use-toast";
-import { toast } from "@/components/ui/use-toast"
+import { useState, useRef, useEffect } from 'react';
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { ModeToggle } from "../components/ModeToggle";
+import { useToast } from "../hooks/use-toast";
 import { Bot, User, Sparkles, Copy, Save, Loader2 } from "lucide-react";
 import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react'
-import { useN8n } from "@/hooks/useN8n";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu"
-import { aiService, ChatMessage, AIWorkflowRequest } from "@/services/aiService";
-import { n8nService } from "@/services/n8nService";
-import MarkdownRenderer from '@/components/MarkdownRenderer';
-import { WorkflowSummary } from '@/components/WorkflowSummary';
-import { WorkflowCredentialsManager } from '@/components/WorkflowCredentialsManager';
+import { useN8n } from "../hooks/useN8n";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "../components/ui/dropdown-menu"
+import { aiService, ChatMessage, AIWorkflowRequest } from "../services/aiService";
+import { n8nService } from "../services/n8nService";
+import MarkdownRenderer from '../components/MarkdownRenderer';
+import { WorkflowSummary } from '../components/WorkflowSummary';
+import { WorkflowCredentialsManager } from '../components/WorkflowCredentialsManager';
 
 export default function AIPlayground() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentResponse, setCurrentResponse] = useState('');
-  const [sessionId, setSessionId] = useState(crypto.randomUUID());
+  const [sessionId] = useState(crypto.randomUUID());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isWorkflowVisible, setIsWorkflowVisible] = useState(false);
   const [currentWorkflow, setCurrentWorkflow] = useState<any>(null);
@@ -297,10 +296,10 @@ export default function AIPlayground() {
                 <div className="flex items-center gap-4">
                   <Textarea
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
                     placeholder="Send a message..."
                     className="flex-1 bg-transparent border-white/20 text-white focus:border-blue-500 focus:ring-blue-500"
-                    onKeyDown={(e) => {
+                    onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         handleSendMessage();
@@ -351,7 +350,7 @@ export default function AIPlayground() {
                           id="url"
                           placeholder="https://your-n8n-instance.com"
                           type="url"
-                          onChange={(e) => n8nService.setBaseUrl(e.target.value)}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => n8nService.setBaseUrl(e.target.value)}
                         />
                       </div>
                       <div className="grid gap-2">
@@ -360,7 +359,7 @@ export default function AIPlayground() {
                           id="api-key"
                           placeholder="Your n8n API key"
                           type="password"
-                          onChange={(e) => n8nService.setApiKey(e.target.value)}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => n8nService.setApiKey(e.target.value)}
                         />
                       </div>
                       <Button onClick={connectToN8n}>Connect</Button>

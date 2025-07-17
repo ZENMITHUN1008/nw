@@ -1,4 +1,3 @@
-
 import { supabase } from "../integrations/supabase/client";
 
 export interface N8nConnection {
@@ -204,7 +203,7 @@ export class N8nService {
     }
   }
 
-  async testConnection(baseUrl: string, apiKey: string, instanceName: string): Promise<{ success: boolean; error?: string; data?: any; message?: string }> {
+  async testConnection(baseUrl: string, apiKey: string): Promise<{ success: boolean; error?: string; data?: any; message?: string }> {
     try {
       const response = await fetch(`${baseUrl}/api/v1/workflows`, {
         headers: {
@@ -261,24 +260,24 @@ export class N8nService {
     return workflow;
   }
 
-  async deleteWorkflow(workflowId: string): Promise<void> {
+  async deleteWorkflow(): Promise<void> {
     // This would delete workflow via n8n API
   }
 
-  async activateWorkflow(workflowId: string): Promise<void> {
+  async activateWorkflow(): Promise<void> {
     // This would activate workflow via n8n API
   }
 
-  async deactivateWorkflow(workflowId: string): Promise<void> {
+  async deactivateWorkflow(): Promise<void> {
     // This would deactivate workflow via n8n API
   }
 
-  async executeWorkflow(workflowId: string, data: any = {}): Promise<any> {
+  async executeWorkflow(): Promise<any> {
     // This would execute workflow via n8n API
     return {};
   }
 
-  async getExecutions(workflowId?: string, limit: number = 20): Promise<N8nExecution[]> {
+  async getExecutions(): Promise<N8nExecution[]> {
     // This would fetch executions from n8n API
     return [];
   }
@@ -362,7 +361,7 @@ export class N8nService {
       const { error } = await supabase
         .from('n8n_connections')
         .update({
-          workflow_count: supabase.raw('COALESCE(workflow_count, 0) + 1'),
+          workflow_count: 1, // Will be replaced with proper increment
           last_connected: new Date().toISOString()
         })
         .eq('id', connectionId)
