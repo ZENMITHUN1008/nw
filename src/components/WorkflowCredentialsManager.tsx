@@ -143,7 +143,7 @@ export const WorkflowCredentialsManager: React.FC<WorkflowCredentialsManagerProp
     setIsDeploying(true);
     try {
       const updatedWorkflow = applyCredentialsToWorkflow();
-      await deployWorkflow(updatedWorkflow);
+      await deployWorkflow();
       setDeploymentStatus('success');
       onCredentialsComplete(updatedWorkflow);
     } catch (error) {

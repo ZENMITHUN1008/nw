@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -11,7 +10,7 @@ import { Bot, User, Sparkles, Copy, Save, Loader2 } from "lucide-react";
 import { useUser, useSupabaseClient } from '../hooks/useSupabase'
 import { useN8n } from "../hooks/useN8n";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "../components/ui/dropdown-menu"
-import { aiService, ChatMessage, AIWorkflowRequest } from "../services/aiService";
+import { aiService, ChatMessage } from "../services/aiService";
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { WorkflowSummary } from '../components/WorkflowSummary';
 import { WorkflowCredentialsManager } from '../components/WorkflowCredentialsManager';

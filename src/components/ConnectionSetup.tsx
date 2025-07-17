@@ -73,7 +73,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
     loadConnections 
   } = useN8n();
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData({
     instanceName: '',
     baseUrl: '',
     apiKey: ''
@@ -124,18 +124,12 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
 
     setStep('testing');
     try {
-      const result = await testConnection(formData.baseUrl, formData.apiKey);
+      const result = await testConnection();
       setTestResult(result);
       
       if (result.success) {
         // Auto-save after successful test
-        await saveConnection(
-          formData.baseUrl, 
-          formData.apiKey, 
-          formData.instanceName,
-          result.data?.workflowCount,
-          result.data?.version
-        );
+        await saveConnection();
         setStep('success');
         setTimeout(() => {
           onSuccess();
