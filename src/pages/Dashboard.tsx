@@ -73,7 +73,7 @@ export default function Dashboard() {
   const handleCreateWorkflow = async () => {
     setIsCreating(true);
     try {
-      const newWorkflow = await createWorkflow();
+      const newWorkflow = await createWorkflow('My New Workflow');
       setWorkflows(prev => [...prev, newWorkflow]);
       setNewWorkflowName('');
       showToast({
@@ -105,7 +105,7 @@ export default function Dashboard() {
     if (!editingWorkflowId) return;
     setIsEditing(true);
     try {
-      const updatedWorkflow = await updateWorkflow();
+      const updatedWorkflow = await updateWorkflow(editingWorkflowId, editedWorkflowName);
       setWorkflows(prev =>
         prev.map(wf => (wf.id === editingWorkflowId ? updatedWorkflow : wf))
       );

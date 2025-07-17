@@ -6,17 +6,17 @@ import { useAuth } from '../hooks/useAuth';
 import Logo from './Logo';
 
 interface CTASectionProps {
-  onDashboardClick?: () => void;
+  onGetStarted?: () => void;
 }
 
-const CTASection: React.FC<CTASectionProps> = ({ onDashboardClick }) => {
+const CTASection: React.FC<CTASectionProps> = ({ onGetStarted }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
   const { user, loading } = useAuth();
 
   const handleGetStartedClick = () => {
-    if (user && onDashboardClick) {
-      onDashboardClick();
+    if (user && onGetStarted) {
+      onGetStarted();
     } else {
       setAuthMode('signup');
       setIsAuthModalOpen(true);

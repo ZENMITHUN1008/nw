@@ -13,6 +13,7 @@
   "dependencies": {
     "@revenuecat/purchases-js": "^1.7.0",
     "@supabase/supabase-js": "^2.51.0",
+    "@tanstack/react-query": "^5.83.0",
     "lovable-tagger": "^1.1.8",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",

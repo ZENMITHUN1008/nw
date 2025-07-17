@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from './components/ui/toaster';
@@ -93,7 +93,12 @@ function App() {
               user ? <AIPlayground /> : <Navigate to="/" replace />
             } />
           </Routes>
-          {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+          {showAuth && (
+            <AuthModal 
+              isOpen={showAuth}
+              onClose={() => setShowAuth(false)} 
+            />
+          )}
           <Toaster />
         </div>
       </Router>

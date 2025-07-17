@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from "../integrations/supabase/client";
@@ -6,6 +7,7 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener
@@ -41,5 +43,7 @@ export const useAuth = () => {
     session,
     loading,
     signOut,
+    showAuth,
+    setShowAuth,
   };
 };

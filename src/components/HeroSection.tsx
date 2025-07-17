@@ -6,10 +6,16 @@ import { useAuth } from '../hooks/useAuth';
 import Logo from './Logo';
 
 interface HeroSectionProps {
-  onDashboardClick?: () => void;
+  onGetStarted?: () => void;
+  onOpenMCPManager?: () => void;
+  onOpenProfile?: () => void;
 }
 
-const HeroSection: React.FC<HeroSectionProps> = ({ onDashboardClick }) => {
+const HeroSection: React.FC<HeroSectionProps> = ({ 
+  onGetStarted, 
+  onOpenMCPManager, 
+  onOpenProfile 
+}) => {
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
@@ -42,8 +48,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onDashboardClick }) => {
   }, []);
 
   const handleStartBuildingClick = () => {
-    if (user && onDashboardClick) {
-      onDashboardClick();
+    if (user && onGetStarted) {
+      onGetStarted();
     } else {
       setAuthMode('signup');
       setIsAuthModalOpen(true);

@@ -125,7 +125,7 @@ export const ConnectionSetup: React.FC<ConnectionSetupProps> = ({ onSkip, onSucc
 
     setStep('testing');
     try {
-      const result = await testConnection();
+      const result = await testConnection(formData.baseUrl, formData.apiKey, formData.instanceName);
       setTestResult(result);
       
       if (result.success) {
