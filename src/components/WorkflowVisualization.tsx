@@ -36,6 +36,14 @@ export const WorkflowVisualization: React.FC<WorkflowVisualizationProps> = ({
   onDeploy,
   isEditable = true 
 }) => {
+  // Add null check for workflow
+  if (!workflow) {
+    return (
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 text-center">
+        <p className="text-slate-400">No workflow data available</p>
+      </div>
+    );
+  }
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [showRawJson, setShowRawJson] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
