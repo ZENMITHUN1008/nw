@@ -430,27 +430,27 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
   }
 
   return (
-    <div className="min-h-screen text-white relative">
+    <div className="min-h-screen bg-slate-900 text-slate-50">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-black/30 backdrop-blur-md border-b border-white/10">
+      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <button
                 onClick={onBack}
-                className="flex items-center space-x-2 text-white/60 hover:text-white transition-colors duration-200"
+                className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors duration-200"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span>Back to Dashboard</span>
               </button>
-              <div className="h-6 w-px bg-white/20"></div>
+              <div className="h-6 w-px bg-slate-600"></div>
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
                   <Server className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-white">MCP Server Manager</h1>
-                  <p className="text-sm text-white/70">Model Context Protocol Integration</p>
+                  <h1 className="text-xl font-semibold">MCP Server Manager</h1>
+                  <p className="text-sm text-slate-400">Model Context Protocol Integration</p>
                 </div>
               </div>
             </div>
@@ -458,14 +458,14 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
             <div className="flex items-center space-x-3">
               <button
                 onClick={debugMCPServers}
-                className="flex items-center space-x-2 bg-amber-600/80 hover:bg-amber-600 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                className="flex items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 title="Debug MCP loading (check console)"
               >
                 🐛 Debug
               </button>
               <button
                 onClick={() => setShowAddForm(true)}
-                className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200"
+                className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-indigo-500/25"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add MCP Server</span>
@@ -476,45 +476,45 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Overview */}
         <div className="mb-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="bg-black/30 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/70 text-sm font-medium">Total Servers</p>
-                  <p className="text-2xl font-bold text-white mt-1">{servers.length}</p>
+                  <p className="text-slate-400 text-sm font-medium">Total Servers</p>
+                  <p className="text-2xl font-bold text-slate-50 mt-1">{servers.length}</p>
                 </div>
-                <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center">
                   <Server className="w-6 h-6 text-purple-400" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-black/30 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/70 text-sm font-medium">Connected</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                  <p className="text-slate-400 text-sm font-medium">Connected</p>
+                  <p className="text-2xl font-bold text-slate-50 mt-1">
                     {servers.filter(s => s.status === 'connected').length}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
                   <CheckCircle className="w-6 h-6 text-emerald-400" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-black/30 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/70 text-sm font-medium">Available Tools</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                  <p className="text-slate-400 text-sm font-medium">Available Tools</p>
+                  <p className="text-2xl font-bold text-slate-50 mt-1">
                     {servers.reduce((sum, s) => sum + (s.tools?.length || 0), 0)}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center">
                   <Wrench className="w-6 h-6 text-amber-400" />
                 </div>
               </div>
@@ -525,17 +525,17 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
         {/* JSON Editor Modal */}
         {showAddForm && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <FileText className="w-6 h-6 text-indigo-400" />
-                  <h2 className="text-xl font-semibold text-white">
+                  <h2 className="text-xl font-semibold">
                     {editingServer ? 'Edit MCP Server' : 'Add MCP Server'}
                   </h2>
                 </div>
                 <button
                   onClick={resetForm}
-                  className="text-white/60 hover:text-white transition-colors text-2xl"
+                  className="text-slate-400 hover:text-white transition-colors text-2xl"
                 >
                   ×
                 </button>
@@ -543,7 +543,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
 
               {/* Preset Selector */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-white/90 mb-3">
+                <label className="block text-sm font-medium text-slate-300 mb-3">
                   Quick Start Templates
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -553,8 +553,8 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
                       onClick={() => handlePresetSelect(key)}
                       className={`p-3 rounded-lg border text-sm font-medium transition-all duration-200 ${
                         selectedPreset === key 
-                          ? 'border-indigo-500 bg-indigo-500/20 text-indigo-400' 
-                          : 'border-white/20 bg-white/10 text-white/80 hover:border-white/30'
+                          ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400' 
+                          : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500'
                       }`}
                     >
                       {preset.name.replace(' MCP Server', '')}
@@ -566,19 +566,19 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
               {/* JSON Editor */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium text-white/90">
+                  <label className="block text-sm font-medium text-slate-300">
                     MCP Server Configuration (JSON)
                   </label>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={formatJsonInput}
-                      className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white/80 text-sm rounded-lg transition-colors duration-200"
+                      className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg transition-colors duration-200"
                     >
                       Format JSON
                     </button>
                     <button
                       onClick={() => copyToClipboard(jsonInput)}
-                      className="p-1 bg-white/10 hover:bg-white/20 text-white/80 rounded transition-colors duration-200"
+                      className="p-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors duration-200"
                       title="Copy to clipboard"
                     >
                       <Copy className="w-4 h-4" />
@@ -594,7 +594,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
                       setJsonError('');
                     }}
                     placeholder="Enter MCP server configuration as JSON..."
-                    className="w-full h-64 px-4 py-3 bg-black/30 border border-white/20 rounded-xl text-white placeholder-white/50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 font-mono text-sm resize-none backdrop-blur-sm"
+                    className="w-full h-64 px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-slate-50 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200 font-mono text-sm resize-none"
                   />
                   {jsonError && (
                     <div className="absolute -bottom-8 left-0 flex items-center space-x-2 text-red-400 text-sm">
@@ -606,14 +606,14 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
               </div>
 
               {/* Schema Documentation */}
-              <div className="mt-8 p-4 bg-black/30 rounded-xl border border-white/20 backdrop-blur-sm">
-                <h3 className="text-sm font-medium text-white/90 mb-3">JSON Schema Reference</h3>
-                <div className="text-xs text-white/70 space-y-1 font-mono">
+              <div className="mt-8 p-4 bg-slate-900/50 rounded-xl border border-slate-600">
+                <h3 className="text-sm font-medium text-slate-300 mb-3">JSON Schema Reference</h3>
+                <div className="text-xs text-slate-400 space-y-1 font-mono">
                   <div><span className="text-indigo-400">type</span>: <span className="text-amber-400">"url"</span> <span className="text-red-400">(required)</span> - Currently only "url" is supported</div>
                   <div><span className="text-indigo-400">name</span>: <span className="text-amber-400">string</span> <span className="text-red-400">(required)</span> - Unique identifier for this MCP server</div>
                   <div><span className="text-indigo-400">url</span>: <span className="text-amber-400">string</span> <span className="text-red-400">(required)</span> - Must start with https://</div>
-                  <div><span className="text-indigo-400">authorization_token</span>: <span className="text-amber-400">string</span> <span className="text-white/50">(optional)</span> - OAuth authorization token</div>
-                  <div><span className="text-indigo-400">tool_configuration</span>: <span className="text-amber-400">object</span> <span className="text-white/50">(optional)</span> - Configure tool usage</div>
+                  <div><span className="text-indigo-400">authorization_token</span>: <span className="text-amber-400">string</span> <span className="text-slate-500">(optional)</span> - OAuth authorization token</div>
+                  <div><span className="text-indigo-400">tool_configuration</span>: <span className="text-amber-400">object</span> <span className="text-slate-500">(optional)</span> - Configure tool usage</div>
                   <div className="ml-4"><span className="text-indigo-400">enabled</span>: <span className="text-amber-400">boolean</span> - Whether to enable tools (default: true)</div>
                   <div className="ml-4"><span className="text-indigo-400">allowed_tools</span>: <span className="text-amber-400">string[]</span> - Restrict allowed tools (default: all tools)</div>
                   <div className="text-emerald-400 text-xs mt-2">💡 MCP automatically discovers tools - use tool_configuration to restrict access</div>
@@ -624,13 +624,13 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
               <div className="flex justify-end space-x-4 mt-6">
                 <button
                   onClick={resetForm}
-                  className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white/80 rounded-xl font-medium transition-colors duration-200"
+                  className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl font-medium transition-colors duration-200"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveServer}
-                  className="px-6 py-3 bg-white text-black hover:bg-white/90 rounded-xl font-medium transition-all duration-200"
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl font-medium transition-all duration-200"
                 >
                   {editingServer ? 'Update Server' : 'Add Server'}
                 </button>
@@ -643,16 +643,16 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
         <div className="space-y-6">
           {servers.length === 0 ? (
             <div className="text-center py-20">
-              <div className="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Server className="w-10 h-10 text-white/60" />
+              <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Server className="w-10 h-10 text-slate-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">No MCP Servers</h3>
-              <p className="text-white/70 max-w-md mx-auto mb-6">
+              <h3 className="text-xl font-semibold text-slate-50 mb-2">No MCP Servers</h3>
+              <p className="text-slate-400 max-w-md mx-auto mb-6">
                 Add your first MCP server to extend Claude's capabilities with external tools and data sources.
               </p>
               <button
                 onClick={() => setShowAddForm(true)}
-                className="bg-white text-black hover:bg-white/90 px-8 py-4 rounded-xl font-semibold transition-all duration-200"
+                className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-indigo-500/25"
               >
                 Add Your First MCP Server
               </button>
@@ -660,20 +660,20 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
           ) : (
             <div className="grid grid-cols-1 gap-6">
               {servers.map((server) => (
-                <div key={server.id} className="bg-black/30 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+                <div key={server.id} className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-3">
                         <div className={`w-3 h-3 rounded-full ${
                           server.status === 'connected' ? 'bg-emerald-500' :
                           server.status === 'testing' ? 'bg-amber-500 animate-pulse' :
-                          'bg-white/40'
+                          'bg-slate-500'
                         }`}></div>
-                        <h3 className="text-lg font-semibold text-white">{server.name}</h3>
+                        <h3 className="text-lg font-semibold text-slate-50">{server.name}</h3>
                         <span className={`px-2 py-1 text-xs font-medium rounded-lg ${
-                          server.status === 'connected' ? 'bg-emerald-500/20 text-emerald-400' :
-                          server.status === 'testing' ? 'bg-amber-500/20 text-amber-400' :
-                          'bg-white/10 text-white/60'
+                          server.status === 'connected' ? 'bg-emerald-500/10 text-emerald-400' :
+                          server.status === 'testing' ? 'bg-amber-500/10 text-amber-400' :
+                          'bg-slate-500/10 text-slate-400'
                         }`}>
                           {server.status === 'connected' ? 'Connected' :
                            server.status === 'testing' ? 'Testing...' :
@@ -682,12 +682,12 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
                       </div>
                       
                       <div className="space-y-2 mb-4">
-                        <div className="flex items-center space-x-2 text-sm text-white/70">
+                        <div className="flex items-center space-x-2 text-sm text-slate-400">
                           <Globe className="w-4 h-4" />
                           <span>{server.url}</span>
                         </div>
                         {server.authorization_token && (
-                          <div className="flex items-center space-x-2 text-sm text-white/70">
+                          <div className="flex items-center space-x-2 text-sm text-slate-400">
                             <Shield className="w-4 h-4" />
                             <span>
                               {showToken[server.id!] ? 
@@ -697,7 +697,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
                             </span>
                             <button
                               onClick={() => toggleTokenVisibility(server.id!)}
-                              className="text-white/50 hover:text-white/70 transition-colors"
+                              className="text-slate-500 hover:text-slate-400 transition-colors"
                             >
                               {showToken[server.id!] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                             </button>
@@ -707,18 +707,18 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
 
                       {server.tools && server.tools.length > 0 && (
                         <div className="mb-4">
-                          <h4 className="text-sm font-medium text-white/90 mb-2">Available Tools ({server.tools.length})</h4>
+                          <h4 className="text-sm font-medium text-slate-300 mb-2">Available Tools ({server.tools.length})</h4>
                           <div className="flex flex-wrap gap-2">
                             {server.tools.slice(0, 6).map((tool) => (
                               <span
                                 key={tool.name}
-                                className="px-3 py-1 bg-indigo-500/20 text-indigo-400 text-sm rounded-lg border border-indigo-500/20"
+                                className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-sm rounded-lg border border-indigo-500/20"
                               >
                                 {tool.name}
                               </span>
                             ))}
                             {server.tools.length > 6 && (
-                              <span className="px-3 py-1 bg-white/10 text-white/60 text-sm rounded-lg">
+                              <span className="px-3 py-1 bg-slate-700 text-slate-400 text-sm rounded-lg">
                                 +{server.tools.length - 6} more
                               </span>
                             )}
@@ -731,7 +731,7 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
                       <button
                         onClick={() => testServerConnection(server)}
                         disabled={testingServer === server.id}
-                        className="p-2 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                        className="p-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors duration-200 disabled:opacity-50"
                         title="Test Connection"
                       >
                         {testingServer === server.id ? (
@@ -742,14 +742,14 @@ export const MCPServerManager: React.FC<MCPServerManagerProps> = ({ onBack }) =>
                       </button>
                       <button
                         onClick={() => startEdit(server)}
-                        className="p-2 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg transition-colors duration-200"
+                        className="p-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors duration-200"
                         title="Edit Server"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteServer(server.id!)}
-                        className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors duration-200"
+                        className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors duration-200"
                         title="Delete Server"
                       >
                         <Trash2 className="w-4 h-4" />
