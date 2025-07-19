@@ -1,33 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { 
   Mic, 
-  Play, 
   Sparkles, 
-  Zap, 
   CheckCircle, 
   Menu, 
   X,
-  ArrowRight,
-  MessageSquare,
-  Database,
-  Globe,
-  Heart,
   LogOut,
   BarChart3,
-  RefreshCw,
-  Calendar,
   Layers,
-  AlertCircle,
-  HelpCircle,
   Rocket,
-  Shield,
-  Users,
   Settings,
   Home,
   PlusCircle,
-  FileText,
   Server,
   Headphones
 } from 'lucide-react';
@@ -38,8 +23,8 @@ import { WorkflowGrid } from '../components/WorkflowGrid';
 import { WorkflowVisualization } from '../components/WorkflowVisualization';
 import { MCPServerManager } from '../components/MCPServerManager';
 import { ProfilePage } from '../components/ProfilePage';
-import { UsageLimitModal } from '../components/UsageLimitModal';
-import { PricingModal } from '../components/PricingModal';
+import UsageLimitModal from '../components/UsageLimitModal';
+import PricingModal from '../components/PricingModal';
 import Logo from '../components/Logo';
 
 // Utility function
@@ -164,8 +149,8 @@ const FeatureCard = ({ icon, title, description, onClick, delay = 0 }: FeatureCa
 
 export const Dashboard = () => {
   const { user, signOut } = useAuth();
-  const { isListening, startListening, stopListening } = useVoice();
-  const { subscription, usage } = useSubscription();
+  const { isRecording, startRecording, stopRecording } = useVoice();
+  const { usage, currentTier } = useSubscription();
   const [currentView, setCurrentView] = useState<'overview' | 'workflows' | 'visualization' | 'mcp' | 'profile'>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [usageLimitModalOpen, setUsageLimitModalOpen] = useState(false);
@@ -251,11 +236,11 @@ export const Dashboard = () => {
     { id: 'profile', label: 'Profile', icon: Settings },
   ];
 
-  const handleVoiceToggle = () => {
-    if (isListening) {
-      stopListening();
+  const handleVoiceToggle = async () => {
+    if (isRecording) {
+      await stopRecording();
     } else {
-      startListening();
+      await startRecording();
     }
   };
 
@@ -267,13 +252,13 @@ export const Dashboard = () => {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'workflows':
-        return <WorkflowGrid />;
+        return <WorkflowGrid workflows={[]} onAction={() => {}} />;
       case 'visualization':
-        return <WorkflowVisualization />;
+        return <WorkflowVisualization workflow={null} />;
       case 'mcp':
-        return <MCPServerManager />;
+        return <MCPServerManager onBack={() => setCurrentView('overview')} />;
       case 'profile':
-        return <ProfilePage />;
+        return <ProfilePage onBack={() => setCurrentView('overview')} />;
       default:
         return (
           <div className="space-y-8">
@@ -328,7 +313,7 @@ export const Dashboard = () => {
                       </div>
                       <div>
                         <p className="text-white/60 text-sm">Plan</p>
-                        <p className="text-white font-semibold">{subscription?.plan || 'Free'}</p>
+                        <p className="text-white font-semibold">{currentTier?.name || 'Free'}</p>
                       </div>
                     </div>
                   </div>
@@ -340,19 +325,19 @@ export const Dashboard = () => {
                     onClick={handleVoiceToggle}
                     className={cn(
                       "relative w-20 h-20 rounded-full border-2 transition-all duration-300 flex items-center justify-center",
-                      isListening 
+                      isRecording 
                         ? "bg-red-500/20 border-red-500 animate-pulse" 
                         : "bg-white/10 border-white/30 hover:bg-white/20"
                     )}
                   >
-                    <Mic className={cn("w-8 h-8", isListening ? "text-red-400" : "text-white")} />
-                    {isListening && (
+                    <Mic className={cn("w-8 h-8", isRecording ? "text-red-400" : "text-white")} />
+                    {isRecording && (
                       <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping"></div>
                     )}
                   </button>
                 </div>
                 <p className="text-center text-white/60 mt-4">
-                  {isListening ? "Listening... Speak your command" : "Click to start voice command"}
+                  {isRecording ? "Listening... Speak your command" : "Click to start voice command"}
                 </p>
               </div>
             </motion.div>
@@ -515,6 +500,9 @@ export const Dashboard = () => {
           setUsageLimitModalOpen(false);
           setPricingModalOpen(true);
         }}
+        limitType="workflow"
+        currentTier={currentTier}
+        usage={usage}
       />
 
       <PricingModal 

@@ -1,17 +1,12 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Send, 
   Mic, 
   Square, 
-  Play, 
   Download, 
-  Upload, 
   Trash2, 
-  Settings,
   Sparkles,
-  Zap,
   MessageSquare,
   Bot,
   User,
@@ -95,7 +90,7 @@ const AIPlayground = () => {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { isListening, transcript, startListening, stopListening } = useVoice();
+  const { isRecording, lastTranscription, startRecording, stopRecording } = useVoice();
 
   // Add CSS animations
   useEffect(() => {
@@ -170,10 +165,10 @@ const AIPlayground = () => {
   }, []);
 
   useEffect(() => {
-    if (transcript) {
-      setInputMessage(transcript);
+    if (lastTranscription) {
+      setInputMessage(lastTranscription);
     }
-  }, [transcript]);
+  }, [lastTranscription]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -194,7 +189,11 @@ const AIPlayground = () => {
     setIsLoading(true);
 
     try {
-      const response = await aiService.generateWorkflow(inputMessage);
+      const response = await aiService.generateWorkflow({
+        description: inputMessage,
+        requirements: [],
+        integrations: []
+      });
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -257,6 +256,14 @@ const AIPlayground = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleVoiceToggle = async () => {
+    if (isRecording) {
+      await stopRecording();
+    } else {
+      await startRecording();
+    }
   };
 
   return (
@@ -456,7 +463,7 @@ const AIPlayground = () => {
                 rows={1}
                 style={{ minHeight: '48px', maxHeight: '120px' }}
               />
-              {isListening && (
+              {isRecording && (
                 <div className="absolute top-1/2 right-3 transform -translate-y-1/2">
                   <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
                 </div>
@@ -464,15 +471,15 @@ const AIPlayground = () => {
             </div>
             
             <button
-              onClick={isListening ? stopListening : startListening}
+              onClick={handleVoiceToggle}
               className={cn(
                 "p-3 rounded-xl transition-all duration-200 flex items-center justify-center",
-                isListening 
+                isRecording 
                   ? "bg-red-500/20 border-2 border-red-500 text-red-400" 
                   : "bg-white/10 border border-white/20 text-white hover:bg-white/20"
               )}
             >
-              {isListening ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
             
             <button
