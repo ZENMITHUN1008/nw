@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { 
   Mic, 
@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { AuthModal } from './components/AuthModal';
 import { Dashboard } from './pages/Dashboard';
+import AIPlayground from './pages/AIPlayground';
+import { MCPServerManager } from './components/MCPServerManager';
 import PricingModal from './components/PricingModal';
 import { useAuth } from './hooks/useAuth';
 import Logo from './components/Logo';
@@ -180,7 +182,7 @@ function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const [pricingRequested, setPricingRequested] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'home' | 'dashboard'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'dashboard' | 'playground' | 'mcp-servers'>('home');
   const { user, loading, signOut } = useAuth();
 
   // Add CSS animations
@@ -260,6 +262,10 @@ function App() {
     const path = window.location.pathname;
     if (path === '/dashboard' && user) {
       setCurrentPage('dashboard');
+    } else if (path === '/playground' && user) {
+      setCurrentPage('playground');
+    } else if (path === '/mcp-servers' && user) {
+      setCurrentPage('mcp-servers');
     } else {
       setCurrentPage('home');
     }
@@ -269,6 +275,10 @@ function App() {
   useEffect(() => {
     if (currentPage === 'dashboard' && user) {
       window.history.pushState({}, '', '/dashboard');
+    } else if (currentPage === 'playground' && user) {
+      window.history.pushState({}, '', '/playground');
+    } else if (currentPage === 'mcp-servers' && user) {
+      window.history.pushState({}, '', '/mcp-servers');
     } else {
       window.history.pushState({}, '', '/');
     }
@@ -317,9 +327,133 @@ function App() {
     );
   }
 
-  // Show dashboard if user is authenticated and on dashboard page
-  if (currentPage === 'dashboard' && user) {
-    return <Dashboard />;
+  // Show appropriate page based on current route
+  if (user) {
+    if (currentPage === 'dashboard') {
+      return <Dashboard />;
+    }
+    
+    if (currentPage === 'playground') {
+      return (
+        <div className="min-h-screen bg-black text-white relative">
+          {/* Same aurora background as landing page */}
+          <div className="fixed inset-0 z-0">
+            <div className={cn(
+              `[--white-gradient:repeating-linear-gradient(165deg,var(--white)_0%,var(--white)_2%,var(--transparent)_4%,var(--transparent)_6%,var(--white)_8%)]
+              [--dark-gradient:repeating-linear-gradient(165deg,var(--black)_0%,var(--black)_2%,var(--dark-gray)_4%,var(--dark-gray)_6%,var(--black)_8%)]
+              [--aurora:repeating-linear-gradient(165deg,var(--dark-blue)_3%,var(--dark-gray)_6%,var(--charcoal)_9%,var(--dark-slate)_12%,var(--black)_15%)]
+              [background-image:var(--dark-gradient),var(--aurora)]
+              [background-size:100%_200%,100%_160%]
+              [background-position:0%_0%,0%_0%]
+              filter blur-[6px] invert-0
+              animate-aurora
+              pointer-events-none
+              absolute inset-0 opacity-70 will-change-transform`
+            )}></div>
+            <div className={cn(
+              `[--aurora-alt:repeating-linear-gradient(170deg,var(--charcoal)_0%,var(--dark-slate)_5%,var(--dark-gray)_10%,var(--black)_15%,var(--charcoal)_20%)]
+              [--dark-alt:repeating-linear-gradient(170deg,var(--black)_0%,var(--black)_3%,var(--dark-gray)_6%,var(--dark-gray)_9%,var(--black)_12%)]
+              [background-image:var(--dark-alt),var(--aurora-alt)]
+              [background-size:100%_180%,100%_140%]
+              [background-position:0%_0%,0%_50%]
+              filter blur-[8px] invert-0
+              animate-aurora-secondary
+              pointer-events-none
+              absolute inset-0 opacity-50 will-change-transform mix-blend-multiply`
+            )}></div>
+          </div>
+          
+          {/* Navigation Header */}
+          <nav className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-between w-[calc(100%-2rem)] max-w-6xl px-6 py-3 bg-black/20 backdrop-blur-md border border-white/10 rounded-full">
+            <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => setCurrentPage('home')}>
+              <div className="transition-transform duration-300 group-hover:scale-105">
+                <Logo size={32} />
+              </div>
+              <span className="text-xl font-bold text-white">WorkFlow AI</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setCurrentPage('dashboard')}
+                className="text-white/80 hover:text-white transition-colors text-sm"
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="text-white/60 hover:text-white transition-all duration-200 p-2 hover:bg-white/10 rounded-lg"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </nav>
+          
+          <div className="pt-24 relative z-10">
+            <AIPlayground />
+          </div>
+        </div>
+      );
+    }
+    
+    if (currentPage === 'mcp-servers') {
+      return (
+        <div className="min-h-screen bg-black text-white relative">
+          {/* Same aurora background as landing page */}
+          <div className="fixed inset-0 z-0">
+            <div className={cn(
+              `[--white-gradient:repeating-linear-gradient(165deg,var(--white)_0%,var(--white)_2%,var(--transparent)_4%,var(--transparent)_6%,var(--white)_8%)]
+              [--dark-gradient:repeating-linear-gradient(165deg,var(--black)_0%,var(--black)_2%,var(--dark-gray)_4%,var(--dark-gray)_6%,var(--black)_8%)]
+              [--aurora:repeating-linear-gradient(165deg,var(--dark-blue)_3%,var(--dark-gray)_6%,var(--charcoal)_9%,var(--dark-slate)_12%,var(--black)_15%)]
+              [background-image:var(--dark-gradient),var(--aurora)]
+              [background-size:100%_200%,100%_160%]
+              [background-position:0%_0%,0%_0%]
+              filter blur-[6px] invert-0
+              animate-aurora
+              pointer-events-none
+              absolute inset-0 opacity-70 will-change-transform`
+            )}></div>
+            <div className={cn(
+              `[--aurora-alt:repeating-linear-gradient(170deg,var(--charcoal)_0%,var(--dark-slate)_5%,var(--dark-gray)_10%,var(--black)_15%,var(--charcoal)_20%)]
+              [--dark-alt:repeating-linear-gradient(170deg,var(--black)_0%,var(--black)_3%,var(--dark-gray)_6%,var(--dark-gray)_9%,var(--black)_12%)]
+              [background-image:var(--dark-alt),var(--aurora-alt)]
+              [background-size:100%_180%,100%_140%]
+              [background-position:0%_0%,0%_50%]
+              filter blur-[8px] invert-0
+              animate-aurora-secondary
+              pointer-events-none
+              absolute inset-0 opacity-50 will-change-transform mix-blend-multiply`
+            )}></div>
+          </div>
+          
+          {/* Navigation Header */}
+          <nav className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-between w-[calc(100%-2rem)] max-w-6xl px-6 py-3 bg-black/20 backdrop-blur-md border border-white/10 rounded-full">
+            <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => setCurrentPage('home')}>
+              <div className="transition-transform duration-300 group-hover:scale-105">
+                <Logo size={32} />
+              </div>
+              <span className="text-xl font-bold text-white">WorkFlow AI</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setCurrentPage('dashboard')}
+                className="text-white/80 hover:text-white transition-colors text-sm"
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="text-white/60 hover:text-white transition-all duration-200 p-2 hover:bg-white/10 rounded-lg"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </nav>
+          
+          <div className="pt-24 relative z-10">
+            <MCPServerManager onBack={() => setCurrentPage('dashboard')} />
+          </div>
+        </div>
+      );
+    }
   }
 
   return (
